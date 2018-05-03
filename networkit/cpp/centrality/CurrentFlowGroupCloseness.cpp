@@ -70,8 +70,13 @@ namespace NetworKit {
                         b.at(j)=1.;
                         b.at(t_i)=-1.;
 
-                        Lamg::setupConnected(L);
-                        Lamg::parallelSolve(b,p);
+                        ///change!!!!!!
+                        /*
+                         *
+                         *
+                         *
+                         *
+                         */
 
                         if(p.at(j)-p.at(t_i)<d.at(t_i))
                             currentCFCC = currentCFCC + p.at(j)-p.at(t_i);
