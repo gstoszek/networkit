@@ -1,7 +1,6 @@
 /*
  * CurrentFlowGroupCloseness.h
  *
- *  Created on:
  *      Author: gstoszek
  */
 

@@ -1,3 +1,10 @@
+/*
+ * CurrentFlowGroupClosenessGTest.h
+ *
+ *      Author: gstoszek
+ */
+
+
 #ifndef CURRENFLOWGROUPCLOSENESSGTEST_H_
 #define CURRENFLOWGROUPCLOSENESSGTEST_H_
 

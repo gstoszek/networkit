@@ -1,7 +1,14 @@
+/*
+ * CurrentFlowGroupClosenessGTest.h
+ *
+ *      Author: gstoszek
+ */
+
+
 #include "CurrentFlowGroupClosenessGTest.h"
 #include "../CurrentFlowGroupCloseness.h"
 #include "../Betweenness.h"
-
+#include "../../generators/ErdosRenyiGenerator.h"
 
 namespace NetworKit {
 
