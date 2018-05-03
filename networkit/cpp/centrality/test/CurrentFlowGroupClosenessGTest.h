@@ -8,7 +8,9 @@
 #ifndef CURRENFLOWGROUPCLOSENESSGTEST_H_
 #define CURRENFLOWGROUPCLOSENESSGTEST_H_
 
-#include <gtest/gtest.h>
+#include "CurrentFlowGroupClosenessGTest.h"
+#include "../CurrentFlowGroupCloseness.h"
+#include "../../generators/ErdosRenyiGenerator.h"
 
 namespace NetworKit {
 
