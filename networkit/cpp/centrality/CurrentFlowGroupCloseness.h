@@ -2,68 +2,49 @@
  * CurrentFlowGroupCloseness.h
  *
  *  Created on:
- *      Author: GSTOSZEK
+ *      Author: gstoszek
  */
 
 #ifndef CURRENTFLOWGROUPCLOSENESS_H_
 #define CURRENTFLOWGROUPCLOSENESS_H_
-#include "../graph/Graph.h"
+
 #include "Centrality.h"
+#include "../algebraic/CSRMatrix.h"
+#include "../numerics/LAMG/Lamg.h"
 
 namespace NetworKit {
+    /*
+     *
+     */
+    class CurrentFlowGroupCloseness: public NetworKit::Centrality {
 
-/**
- *
- */
-    class CurrentFlowGroupCloseness : public NetworKit::Centrality {
     public:
-/**
- * Current Flow Group Closeness Centrality finds a Subset S of k vertices with an approximation
- * of (1-k/(k-1)*1/e-e) to the optimum in nearly linear runtime for any e>0.
- *
- * @param G Unweighted graph
- * @param k Size of the group of nodes
- * (-------------------------------------@param L Laplacian matrix of G-----------------------------------)
- * @param e Approximation error
- */
-
-        CurrentFlowGroupCloseness(const Graph& G, count k = 1, double e=0);
-
-        double w_min;
-        double w_max;
-        int n;
-        int m;
-
-        /**
-	    *
-	    */
-        void run();
-        /**
-	    *
-	    */
-        /*vector GainsEST()*/
-        std::vector<double> GainsEst(Graph& G, std::vector<int> S, double e);
-        /**
-	    *
-	    */
-        void run();
-        /**
-         *
-         */
-        void Generate_Gaussian_matrices(double G[][]);
         /*
          *
          */
-        void matrix_delete_row_and_column(double G[][], int i);
+    CurrentFlowGroupCloseness(const Graph& G, const double epsilon=0.01, const double delta=0.1, const double universalConstant=1.0, const int groupsize = 10);
         /*
          *
          */
-        std::vector<double> ERSumEst(Graph& G,double L[][], double e);
-        /*
-         *
-         */
-        bool check(std::vector<int> S, int u);
-    };
+    void run() override;
+    /*
+     *
+     */
+    count numberOfSamples();
+    /*
+     *
+     */
+
+    private:
+
+        double epsilon;
+        double delta;
+        count r;
+        double universalConstant;
+        int groupsize;
+        std::vector<count> d;
+        std::vector<std::vector<node>> L;
+};
 
 } /* namespace NetworKit */
 #endif /* CURRENTFLOWGROUPCLOSENESS_H_ */

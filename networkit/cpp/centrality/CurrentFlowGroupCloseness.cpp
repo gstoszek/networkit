@@ -7,171 +7,97 @@
 
 #include "CurrentFlowGroupCloseness.h"
 #include "Centrality.h"
+#include "../algebraic/CSRMatrix.h"
+#include "../numerics/LAMG/Lamg.h"
+
 
 /**
  * CSRMatrix.h for Laplacian
  */
 
 namespace NetworKit {
-/***SAMPLING*** (Number 2**/
- CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(const Graph &G, count k, count e)
- {
+/*
+ * ***SAMPLING*** (Number *** II ***)
+ */
+
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(const Graph& G, const double epsilon, const double delta, const double universalConstant, const int groupsize) : Centrality(G, true), epsilon(epsilon), delta(delta), universalConstant(universalConstant), groupsize(groupsize){
 
     }
-    /**
-     *
-     */
+
+
+
     void CurrentFlowGroupCloseness::run() {
-        /*Graph to Laplacian*/
-        int L[n][n];
-        /*initialize ERSumsEst*/
-        std::vector<double> r= ERSumEst(G, L, e / 3);
-        /*Group S*/
-        std::vector<int> S;
-        /*find argmin of u*/
-        double current_min;
-        int current_vertice;
-        current_min = r.at(0);
-        for(int i=1; i<n; i++){
-            if(current_min > r.at(i)){
-                   current_vertice = i;
-            }
-        }
-        S.push_back(current_vertice);
+        //GREEDY WITH SAMPLING
+        count n = G.upperNodeIdBound();
 
-        /*repeat GainsEst till k*/
-        std::vector<double> g = GainsEst(G,S,e);
-        for(int i= 1; i<k; i++){
-            /*step a*/
-            g = GainsEst(G,S,e/2);
-            /*step b*/
-            /*!!!!!!!!!!!!!!!!*/
-            current_min = g.at(0);
-            for(int i=1; i<n; i++){
-                if(check(S,i) = true ) {
-                    if (current_min > g.at(i)) {
-                        current_vertice = i;
+        std::vector<node> stack_T(n);
+        std::vector<node> stack_S(n);
+        std::vector<double> p(n);
+        std::vector<double> b(n);
+        d.clear();
+        d.resize(n, 0);
+
+        double currentCFCC=0;
+        double nextCFCC=0;
+
+        node nextnode;
+        count nodetoerase_index;
+        count t_i;
+        count samplesize= ceil(universalConstant * epsilon * epsilon * floor(log(n)));
+
+        CSRMatrix L = CSRMatrix::laplacianMatrix(G);
+
+        //Group Loop
+        for (count i = 1; i <= groupsize; i++){
+            //Maximal Gain Loop
+
+            for (count j= 0; j<stack_T.size(); j++) {
+
+                //main function
+                if (std::find(stack_S.begin(), stack_S.end(), stack_T.at(j)) == stack_S.end()) {
+                    //Sample
+                    for (count l = 0; l < samplesize; l++) {
+                        t_i = rand() % (n + 1);  //delete?
+                        do {
+                            t_i = rand() % (n + 1);
+                        } while ((t_i == j) &&
+                                 (std::find(stack_S.begin(), stack_S.end(), stack_T.at(t_i)) != stack_S.end()));
+
+                        for(count a=0;a<n;a++){
+                            b.at(a)=0.;
+                            p.at(a)=0.;
+                        }
+                        b.at(j)=1.;
+                        b.at(t_i)=-1.;
+
+                        Lamg::setupConnected(L);
+                        Lamg::parallelSolve(b,p);
+
+                        if(p.at(j)-p.at(t_i)<d.at(t_i))
+                            currentCFCC = currentCFCC + p.at(j)-p.at(t_i);
+                        else{
+                            currentCFCC = currentCFCC + d.at(t_i);
+                        }
                     }
+                    currentCFCC = samplesize/n*(stack_T.size())/currentCFCC;
                 }
-            }
-            S.push_back(current_vertice);
-        }
-        return S;
-    }
-    /**
-     *
-     * @param G
-     * @param S
-     * @param e
-     * @return
-     */
-    std::vector<double> CurrentFlowGroupCloseness::GainsEst(Graph &G, std::vector<int> S, double e)
-    {
-        /* Set delta_1, delta_2 and delta_3*/
-        double delta_1;
-        double delta_2;
-        double delta_3;
+                    if (currentCFCC > nextCFCC) {
+                        nextCFCC = currentCFCC;
+                        currentCFCC = 0;
+                        nextnode = stack_T.at(j);
+                        nodetoerase_index = j;
+                        }
+                }
+            stack_S.push_back(nextnode);
+            //stack_T.erase(nodetoerase_index);
 
-        int p;
-        int q;
-        int r;
+            //Update d
 
-        /*check*/
-        delta_1 = (w_max*e)/(27*w_min)*std::sqrt(((1-e/9)/(1+e/9)*n));
 
-        /*check*/
-        delta_2 = (1/4*std::pow(n,4)*w_max)*std::sqrt(e*std::sqrt(std::pow(w_min,3))/(9*n));
-
-        delta_3 = delta_2;
-
-        /* Generate random Gaussian matrices P,Q,R */
-        /*check */
-        p = std::ceil(4*(std::pow(e/9,2)/2-1/(std::pow(e/9,3)/3)*ln));
-        q=p;
-        r=p;
-
-        double P[p][n];
-        double Q[q][m];
-        double R[r][n];
-        double X[n][n];
-
-        /* MatrixtoLaplacian */
-        /* !!!!!!!!!!!!!!!!! */
-        X= L;
-        Generate_Gaussian_matrices(P);
-        Generate_Gaussian_matrices(Q);
-        Generate_Gaussian_matrices(R);
-
-        /* Let X be Diag(L_Si 1) */
-        /* !!!!!!!!!!!!!!!!!!!!! */
-        for(int i= 0; i<= S.end();i++){
-            matrix_delete_row_and_column(X, S.at(i));
         }
 
-
-
     }
 
-    /**
-     *
-     * @param GK
-     */
-    void CurrentFlowGroupCloseness::Generate_Gaussian_matrices(double GAG[][])
-    {
-        /*intialising standard deviation to 1.0*/
-        double sigma = 1.0;
-        double r, s = 2.0 * sigma * sigma;
-
-        /* sum is for normalization*/
-        double sum = 0.0;
-
-        /*matrix orientation*/
 
 
-        for (int i = 0; x < G.row ; i++)
-        {
-            for(int j = 0; y < G.column; j++)
-            {
-                r = sqrt(i*i + j*j);
-                G[i][j] = (exp(-(r*r)/s))/(M_PI * s);
-            }
-        }
-    }
-    /*
-     *
-     */
-    void CurrentFlowGroupCloseness::matrix_delete_row_and_column(double G[][],i){
-
-        for(int k=0; k<n; k++){
-            G[k][i]= -1;
-            G[i][k]= -1;
-        }
-    }
-
-    std::vector<double> CurrentFlowGroupCloseness::ERSumEst(Graph &G, L[][], double e) {
-        /*Set delta */
-        double delta;
-        delta = e/(9*std::pow(n,2))*std::sqrt(((1-e/3)*w_min)/((1+e/3)*w_max));
-
-        /*Generate a random Gaussian matrix Q*/
-        int q;
-        q = std::ceil(4*(std::pow(e/3,2)/2-1/std::pow(e/3,3)/3));
-        double Q[q][n];
-
-        /*Compute Q sqrt(W) B*/
-        /* !!!!!!!!!!!!!!!!!!*/
-
-        /*Solver for approximation of Z*/
-
-    }
-
-    bool CurrentFlowGroupCloseness::check(std::vector<node> S, int u) {
-        bool check = true;
-        for(int i = 0; i< S.size();i++){
-            if(S.at(i)=u){
-                check= false;
-            }
-        }
-        return check;
-    }
-}
+} /* namespace NetworKit*/
