@@ -12,7 +12,8 @@
 #include <chrono>
 #include <stdlib.h>
 #include <cmath>
-#include "EffectiveResistanceDistance.h"
+/* no such file availabe */
+/* #include "EffectiveResistanceDistance.h" */
 #include "ERD2.h"
 #include "ERDLevel.h"
 #include <armadillo>

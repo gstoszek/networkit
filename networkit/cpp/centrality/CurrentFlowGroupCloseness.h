@@ -10,7 +10,8 @@
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
-#include "EffectiveResistanceDistance.h"
+/* no such file availabe */
+/* #include "EffectiveResistanceDistance.h" */
 #include "ERD2.h"
 #include "ERDLevel.h"
 #include <armadillo>
