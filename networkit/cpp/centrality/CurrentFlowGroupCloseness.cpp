@@ -18,12 +18,13 @@
 #include <armadillo>
 
 namespace NetworKit {
+
 /*
  * ***SAMPLING*** (Number *** II ***)
  */
 
    CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(const Graph& G, const double epsilon, const double delta, const count groupsize, const count upperDegreeBound) : Centrality(G, true), epsilon(epsilon), delta(delta), groupsize(groupsize), upperDegreeBound(upperDegreeBound){
-
+        double sum;
         S.clear();
         S.resize(groupsize);
 
@@ -40,18 +41,18 @@ namespace NetworKit {
         ERD=L;
         Adj=L;
 
-
-        G.forNodes([&](node v){
-            vList[v]=v;
-            G.forNodes([&](node w){
-              if(G.hasEdge(v,w)){
-                L(v,w)=-1.;
-                L(v,v)+=1.;
-                Adj(v,w)=1;
-                TopMatch[v].push_back (w);
-              }
-            });
-        });
+        for(count i=0;i<L.n_rows;i++){
+          sum=0.;
+          vList[i]=i;
+          for(count j=0;j<L.n_rows;j++){
+            if(G.hasEdge(i,j)){
+              L(i,j)=-1.;
+              sum+=1.;
+              TopMatch[i].push_back(j);
+            }
+          }
+          L(i,i)=sum;
+        }
     }
     /*******************************************************************************************************************************************************/
     std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
@@ -143,11 +144,11 @@ namespace NetworKit {
           scaling_factor=(double)(n);
           if(k_max>vList.size()){
             k_max=vList.size()-1;
-            scaling_factor=(double)(n)/(double)(k_max);
+            scaling_factor=(double)((G.upperNodeIdBound()))/(double)(k_max);
           }
           S_CFGCC=0.;
           V.resize(vList.size(),true);
-          d.resize(G.upperNodeIdBound(),(double) (n*n));
+          d.resize(G.upperNodeIdBound(),n*n);
           for(count i=0;i<k_max;i++){
             /*Maximal Gain Loop*/
             for (count j=0; j<vList.size()-n_peripheral_merges;j++) {
@@ -177,7 +178,7 @@ namespace NetworKit {
                     d[v] = ERD(v,s_next);
                 }
             }
-            S[i]=s_next+1;
+            S[i]=s_next;
             V[s_next]=false;
         }
         CFGCC=S_CFGCC;
@@ -196,21 +197,21 @@ namespace NetworKit {
       ID=0;
       c_indices.resize(0);
 
-     ERDLevel Level(ID,vList,Matching,TopMatch,Adj);
-     LevelList.push_back (Level);
+      ERDLevel Level(ID,vList,Matching,TopMatch,Adj);
+      LevelList.push_back (Level);
       /*update*/
       minDegree=update_minDegree(minDegree);
 
 
-      while(minDegree==1){
         c_indices=peripheral_indices();
         Matching=update_Matching(c_indices);
         coarse_L(c_indices);
+        ID++;
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
-        minDegree=update_minDegree(minDegree);
-        TopMatch=update_TopMatch(minDegree);
-      }
+
+
+      /*
       while(minDegree<upperDegreeBound){
         c_indices=coarsing_indices(minDegree, false);
         Matching=update_Matching(c_indices);
@@ -221,8 +222,9 @@ namespace NetworKit {
         minDegree=update_minDegree(minDegree);
         TopMatch=update_TopMatch(minDegree);
       }
+      */
       /*create pseudo inverse*/
-      L=arma::pinv(L, 0.01);
+      L=arma::pinv(L,0.001);
       /*calculate initial ERD Matrix*/
       for(count i=0;i<vList.size();i++){
         v=vList[i];
@@ -263,8 +265,8 @@ namespace NetworKit {
           search=true;
           j=0;
           while( (j<vList.size())&&(search)){
-            w=vList[j];
-            if(L(i,j)!=0){
+            if((L(i,j)!=0) && (i!=j)){
+              w=vList[j];
               update_List[v].push_back(w);
               if(update_List[v].size()==minDegree){
                 search=false;
@@ -285,6 +287,7 @@ namespace NetworKit {
       search=true;
       min=n;
       i=0;
+
       while((i<L.n_rows)&&(search)){
         if(L(i,i)<min){
           min=L(i,i);
@@ -296,6 +299,11 @@ namespace NetworKit {
       }
       if(min==0){
         std::cout<<"NETWORK_ERROR: min= "<< min << "\n\n";
+      }
+      for(count i=0;i<L.n_rows;i++){
+        if(L(i,i)==0){
+          std::cout<<"ERROR\n";
+        }
       }
       return min;
     }
@@ -356,7 +364,7 @@ namespace NetworKit {
         std::vector<std::pair<count,count>> indices;
 
         c_List.resize(0);
-        s_List.resize(n,true);
+        s_List.resize(G.upperNodeIdBound(),true);
         /*potential candidates*/
         for(count i=0;i<L.n_rows;i++){
           if(L(i,i)==cDegree){
@@ -428,7 +436,7 @@ namespace NetworKit {
       std::vector<count> merge_value;
 
       Matching=LevelList[1].get_Matching();
-      merge_value.resize(n,0);
+      merge_value.resize(G.upperNodeIdBound(),0);
       for(count i=0;i<Matching.size();i++){
         v=Matching[i].first;
         s=Matching[i].second;
@@ -450,7 +458,6 @@ namespace NetworKit {
     void CurrentFlowGroupCloseness::coarse_L(std::vector<std::pair<count,count>> Matchings){
       count k;
       count l;
-
       /*s=supernode - c = to be coarsed node - w = adjacent node to c*/
       node s;
       node c;
@@ -461,12 +468,10 @@ namespace NetworKit {
       for(count i=0;i<vList.size();i++){
         reverse[vList[i]]=i;
       }
-      arma::uvec indices(vList.size()- Matchings.size());
       for(count i=0;i<Matchings.size();i++){
         c=Matchings[i].first;
         s=Matchings[i].second;
-        L(s,c)=0;
-        L(c,s)=0;
+        L(s,s)-=1;
         for(count j=1;j<TopMatch[c].size();j++){
           w=reverse[TopMatch[c][j]];
           if(L(s,w)==0){
@@ -481,6 +486,7 @@ namespace NetworKit {
         Adj(vList[s],vList[c])=0;
         Adj(vList[c],vList[s])=0;
       }
+      arma::uvec indices(vList.size()-Matchings.size());
       k=0;
       l=0;
       for(count i=0;i<vList.size();i++){
@@ -495,6 +501,7 @@ namespace NetworKit {
       for(count i=0;i<Matchings.size();i++){
         vList.erase(vList.begin()+Matchings[i].first-i);
       }
+
       L=L.submat(indices, indices);
     }
     /**************************************************************************/
