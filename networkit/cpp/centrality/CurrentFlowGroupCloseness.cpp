@@ -203,20 +203,15 @@ namespace NetworKit {
 
 
       while(minDegree==1){
-        std::cout<< "************1***********\n";
         c_indices=peripheral_indices();
-        std::cout<< "************2***********\n";
         Matching=update_Matching(c_indices);
-        std::cout<< "************3***********\n";
         coarse_L(c_indices);
-        std::cout<< "************4***********\n";
         ID++;
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
         minDegree=update_minDegree(minDegree);
         TopMatch=update_TopMatch();
       }
-      std::cout<< "************B***********\n";
       while(minDegree<upperDegreeBound){
         c_indices=coarsing_indices(minDegree, false);
         Matching=update_Matching(c_indices);
@@ -321,9 +316,10 @@ namespace NetworKit {
         if(L(i,i)==1){
           v=vList[i];
           s=reverse[TopMatch[v][0]];
-          if(indices.size()==64)
+          if(indices.size()==64){
             std::cout << "s:="<<s <<", v="<< v<<"\n\n";
             std::cout << "DOES A ERROR APPEAR HERE?";
+          }
           indices.push_back(std::make_pair(i,s));
         }
       }
