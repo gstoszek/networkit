@@ -46,7 +46,7 @@ namespace NetworKit {
         std::vector<std::pair<node,node>> update_Matching(std::vector<std::pair<count,count>> indices);
         std::vector<std::pair<count,count>> peripheral_indices();
         std::vector<std::pair<count,count>> coarsing_indices(count cDegree,bool Random);
-        std::vector<std::vector<node>> update_TopMatch();
+        std::vector<std::vector<node>> update_TopMatch(count minDegree);
         count update_minDegree(count minDegree);
         std::pair<node,node> random_edge();
         count merge_peripheral_nodes();

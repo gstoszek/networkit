@@ -39,7 +39,7 @@ namespace NetworKit {
         /*EffectiveResistanceDistance Matrix ERD*/
         ERD=L;
         Adj=L;
-        vList.resize(n);
+
 
         G.forNodes([&](node v){
             vList[v]=v;
@@ -147,7 +147,7 @@ namespace NetworKit {
           }
           S_CFGCC=0.;
           V.resize(vList.size(),true);
-          d.resize(n,(double) (n*n));
+          d.resize(G.upperNodeIdBound(),(double) (n*n));
           for(count i=0;i<k_max;i++){
             /*Maximal Gain Loop*/
             for (count j=0; j<vList.size()-n_peripheral_merges;j++) {
@@ -206,11 +206,10 @@ namespace NetworKit {
         c_indices=peripheral_indices();
         Matching=update_Matching(c_indices);
         coarse_L(c_indices);
-        ID++;
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
         minDegree=update_minDegree(minDegree);
-        TopMatch=update_TopMatch();
+        TopMatch=update_TopMatch(minDegree);
       }
       while(minDegree<upperDegreeBound){
         c_indices=coarsing_indices(minDegree, false);
@@ -220,7 +219,7 @@ namespace NetworKit {
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
         minDegree=update_minDegree(minDegree);
-        TopMatch=update_TopMatch();
+        TopMatch=update_TopMatch(minDegree);
       }
       /*create pseudo inverse*/
       L=arma::pinv(L, 0.01);
@@ -250,18 +249,28 @@ namespace NetworKit {
       }
     }
     /***************************************************************************/
-    std::vector<std::vector<node>> CurrentFlowGroupCloseness::update_TopMatch(){
+    std::vector<std::vector<node>> CurrentFlowGroupCloseness::update_TopMatch(count minDegree){
+      bool search;
+      count j;
+
       node v;
       node w;
       std::vector<std::vector<node>> update_List;
-      update_List.resize(n);
+      update_List.resize(G.upperNodeIdBound());
       for(count i=0;i<vList.size();i++){
         v=vList[i];
-        for(count j=i+1;j<vList.size();j++){
-          w=vList[j];
-          if(L(i,j)!=0){
-            update_List[w].push_back(v);
-            update_List[v].push_back(w);
+        if(L(i,i)==minDegree){
+          search=true;
+          j=0;
+          while( (j<vList.size())&&(search)){
+            w=vList[j];
+            if(L(i,j)!=0){
+              update_List[v].push_back(w);
+              if(update_List[v].size()==minDegree){
+                search=false;
+              }
+            }
+            j++;
           }
         }
       }
@@ -307,7 +316,7 @@ namespace NetworKit {
 
       std::vector<std::pair<count,count>> indices;
       std::vector<count> reverse;
-      reverse.resize(n);
+      reverse.resize(G.upperNodeIdBound());
       for(count i=0;i<vList.size();i++){
         reverse[vList[i]]=i;
       }
@@ -316,10 +325,6 @@ namespace NetworKit {
         if(L(i,i)==1){
           v=vList[i];
           s=reverse[TopMatch[v][0]];
-          if(indices.size()==64){
-            std::cout << "s:="<<s <<", v="<< v<<"\n\n";
-            std::cout << "DOES A ERROR APPEAR HERE?";
-          }
           indices.push_back(std::make_pair(i,s));
         }
       }
@@ -344,7 +349,7 @@ namespace NetworKit {
         std::vector<count> c_List;
         /*c_index-s_index mapping*/
         std::vector<count> reverse;
-        reverse.resize(n);
+        reverse.resize(G.upperNodeIdBound());
         for(count i=0;i<vList.size();i++){
           reverse[vList[i]]=i;
         }
@@ -452,7 +457,7 @@ namespace NetworKit {
       node w;
 
       std::vector<count> reverse;
-      reverse.resize(n);
+      reverse.resize(G.upperNodeIdBound());
       for(count i=0;i<vList.size();i++){
         reverse[vList[i]]=i;
       }
