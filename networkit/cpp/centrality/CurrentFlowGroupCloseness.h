@@ -31,26 +31,30 @@ namespace NetworKit {
         void setCFGCC(double newCFGCC);
         std::vector<node> getNodesofGroup();
         double getCFGCC();
-        void update_CFGCC();
+        void update_CFGCC(count n_peripheral_merges);
 
         void compute_initial_ERD(count upperDegreeBound);
         void compute_ERD();
         void first_join(node s, node v);
+        void first_join_peripheral(node s, node v,count multiplier);
         void edge_fire(node v, node w);
+        void non_bridge_delete(node v,node w);
         void coarse_L(std::vector<std::pair<count,count>> indices);
         void uncoarse_L();
-        void uncoarse(node s,node v);
+        void clean_network();
+        void uncoarse(node s,node v,count ID);
 
         std::vector<std::pair<node,node>> update_Matching(std::vector<std::pair<count,count>> indices);
         std::vector<std::pair<count,count>> peripheral_indices();
         std::vector<std::pair<count,count>> coarsing_indices(count cDegree,bool Random);
-        std::vector<std::vector<node>> update_TopMatch();
-        count update_minDegree();
+        std::vector<std::vector<node>> update_TopMatch(count minDegree);
+        count update_minDegree(count minDegree);
         std::pair<node,node> random_edge();
+        count merge_peripheral_nodes();
 
 
     private:
-
+        count n;
         double epsilon;
         double delta;
         count groupsize;
