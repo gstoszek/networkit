@@ -12,64 +12,38 @@
 #include <chrono>
 #include <stdlib.h>
 #include <cmath>
-/* no such file availabe */
-/* #include "EffectiveResistanceDistance.h" */
 #include "ERD2.h"
 #include "ERDLevel.h"
 #include <armadillo>
 
 namespace NetworKit {
 
-/*
- * ***SAMPLING*** (Number *** II ***)
- */
-
-   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(const Graph& G, const double epsilon, const double delta, const count groupsize, const count upperDegreeBound) : Centrality(G, true), epsilon(epsilon), delta(delta), groupsize(groupsize), upperDegreeBound(upperDegreeBound){
-        double sum;
-        S.clear();
-        S.resize(groupsize);
-
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(const Graph& G,const count k, const count CB) : Centrality(G, true),k(k),CB(CB){
+        S.resize(k);
         CFGCC = 0.;
-
         n=G.upperNodeIdBound();
         vList.resize(n);
         TopMatch.resize(n);
-
         /*Laplacian*/
         L.set_size(n,n);
         L.zeros();
-        /*EffectiveResistanceDistance Matrix ERD*/
+
         ERD=L;
         Adj=L;
 
         for(count i=0;i<L.n_rows;i++){
-          sum=0.;
           vList[i]=i;
           for(count j=0;j<L.n_rows;j++){
             if(G.hasEdge(i,j)){
               L(i,j)=-1.;
-              sum+=1.;
+              L(i,i)+=1;
               TopMatch[i].push_back(j);
             }
           }
-          L(i,i)=sum;
         }
     }
-    /*******************************************************************************************************************************************************/
-    std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
-        return S;
-    }
-    /*******************************************************************************************************************************************************/
-    double CurrentFlowGroupCloseness::getCFGCC() {
-        return CFGCC;
-    }
-    /*******************************************************************************************************************************************************/
-    void CurrentFlowGroupCloseness::setCFGCC(double newCFGCC) {
-        CFGCC = newCFGCC;
-    }
-    /*******************************************************************************************************************************************************/
-    void CurrentFlowGroupCloseness::run() {
 
+    void CurrentFlowGroupCloseness::run() {
         count ID;
         count n_peripheral_merges;
         auto start = std::chrono::high_resolution_clock::now();
@@ -78,20 +52,16 @@ namespace NetworKit {
         std::vector<std::pair<node,node>> Matching;
         std::vector<std::pair<count,count>> Indices;
 
-        std::cout << "Number of Nodes:" << n << "\n";
-        /**************************************************************************************************************/
-        /*calculating D-Matrix with ERD2*/
-        /**************************************************************************************************************/
-        std::cout << "Start: Computing initial ERD with upper degree bound: "<<upperDegreeBound<< "\n";
-        if(upperDegreeBound<2){
-          compute_ERD();
+        std::cout << "Start: Computing initial ERD with upper degree bound: "<<CB<< "\n";
+        if(CB<2){
+          computeERD();
           end = std::chrono::high_resolution_clock::now();
           diff = end-start;
           std::cout << "Finished in " << diff.count() << "(s)" << "\n\n";
-          update_CFGCC(0);
+          greedy(0);
         }
         else{
-        compute_initial_ERD(upperDegreeBound);
+        computeInitialERD(CB);
         end = std::chrono::high_resolution_clock::now();
         diff = end-start;
         std::cout << "Finished in " << diff.count() << "(s)" << "\n\n";
@@ -104,14 +74,21 @@ namespace NetworKit {
           }
           ID--;
           vList=LevelList[ID].get_vList();
-          //std::cout << "CFGCC: "<< CFGCC << ", Number of Nodes: " << vList.size()<< "\n";
         }
-        n_peripheral_merges=merge_peripheral_nodes();
-        update_CFGCC(n_peripheral_merges);
+        n_peripheral_merges=mergePeripheralNodes();
+        greedy(n_peripheral_merges);
         }
       }
-        /**************************************************************************************************************/
-        void CurrentFlowGroupCloseness::clean_network(){
+      /*******************************************************************************************************************************************************/
+      std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
+          return S;
+      }
+      /*******************************************************************************************************************************************************/
+      double CurrentFlowGroupCloseness::getCFGCC() {
+          return CFGCC;
+      }
+      /**************************************************************************************************************/
+        void CurrentFlowGroupCloseness::cleanNetwork(){
           count n2;
           n2=0;
           for(count i=0;i<n;i++){
@@ -130,7 +107,7 @@ namespace NetworKit {
           }
         }
         /**************************************************************************************************************/
-        void CurrentFlowGroupCloseness::update_CFGCC(count n_peripheral_merges){
+        void CurrentFlowGroupCloseness::greedy(count n_peripheral_merges){
           count k_max;
           node s;
           node s_next;
@@ -185,12 +162,9 @@ namespace NetworKit {
         CFGCC=S_CFGCC;
     }
 
-    void CurrentFlowGroupCloseness::compute_initial_ERD(count upperDegreeBound){
+    void CurrentFlowGroupCloseness::computeInitialERD(count CB){
       count ID;
       count minDegree;
-
-      node v;
-      node w;
 
       minDegree=1;
       std::vector<std::pair<count,count>> c_indices;
@@ -201,43 +175,35 @@ namespace NetworKit {
       ERDLevel Level(ID,vList,Matching,TopMatch,Adj);
       LevelList.push_back (Level);
       /*update*/
-      minDegree=update_minDegree(minDegree);
+      minDegree=updateMinDegree(minDegree);
 
-
-        c_indices=peripheral_indices();
-        Matching=update_Matching(c_indices);
-        coarse_L(c_indices);
+      while(minDegree==1){
+        c_indices=peripheralCoarsingIndices();
+        Matching=updateMatching(c_indices);
+        coarseLaplacian(c_indices);
         ID++;
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
-
-
+        minDegree=updateMinDegree(minDegree);
+        TopMatch=updateTopMatch(minDegree);
+      }
       /*
-      while(minDegree<upperDegreeBound){
-        c_indices=coarsing_indices(minDegree, false);
-        Matching=update_Matching(c_indices);
-        coarse_L(c_indices);
+      while(minDegree<CB){
+        c_indices=coarsingIndices(minDegree, false);
+        Matching=updateMatching(c_indices);
+        coarseLaplacian(c_indices);
         ID++;
         Level.set(ID,vList,Matching,TopMatch,Adj);
         LevelList.push_back (Level);
-        minDegree=update_minDegree(minDegree);
-        TopMatch=update_TopMatch(minDegree);
+        minDegree=updateMinDegree(minDegree);
+        TopMatch=updateTopMatch(minDegree);
       }
       */
       /*create pseudo inverse*/
-      L=arma::pinv(L,0.001);
-      /*calculate initial ERD Matrix*/
-      for(count i=0;i<vList.size();i++){
-        v=vList[i];
-        for(count j=i+1;j<vList.size();j++){
-          w=vList[j];
-          ERD(v,w)=L(i,i)+L(j,j)-2.*L(i,j);
-          ERD(w,v)=ERD(v,w);
-        }
-      }
+      computeERD();
     }
     /***************************************************************************/
-    void CurrentFlowGroupCloseness::compute_ERD(){
+    void CurrentFlowGroupCloseness::computeERD(){
       node v;
       node w;
       L=arma::pinv(L, 0.01);
@@ -252,7 +218,7 @@ namespace NetworKit {
       }
     }
     /***************************************************************************/
-    std::vector<std::vector<node>> CurrentFlowGroupCloseness::update_TopMatch(count minDegree){
+    std::vector<std::vector<node>> CurrentFlowGroupCloseness::updateTopMatch(count minDegree){
       bool search;
       count j;
 
@@ -280,7 +246,7 @@ namespace NetworKit {
       return update_List;
     }
     /***************************************************************************/
-    count CurrentFlowGroupCloseness::update_minDegree(count minDegree){
+    count CurrentFlowGroupCloseness::updateMinDegree(count minDegree){
       bool search;
       count min;
       count i;
@@ -309,7 +275,7 @@ namespace NetworKit {
       return min;
     }
     /***************************************************************************/
-    std::vector<std::pair<node,node>> CurrentFlowGroupCloseness::update_Matching(std::vector<std::pair<count,count>> indices){
+    std::vector<std::pair<node,node>> CurrentFlowGroupCloseness::updateMatching(std::vector<std::pair<count,count>> indices){
       std::vector<std::pair<node,node>> Matching;
       Matching.resize(indices.size());
         for(count i=0;i<Matching.size();i++){
@@ -319,7 +285,7 @@ namespace NetworKit {
       return Matching;
     }
     /***************************************************************************/
-    std::vector<std::pair<count,count>> CurrentFlowGroupCloseness::peripheral_indices(){
+    std::vector<std::pair<count,count>> CurrentFlowGroupCloseness::peripheralCoarsingIndices(){
       count v;
       count s;
 
@@ -340,16 +306,12 @@ namespace NetworKit {
       return indices;
     }
     /***************************************************************************/
-      /*
-      Type 0: Matching without Permutation -> not randomized;
-      Type 1: Matching with Permutation -> randomized;
-      */
-    std::vector<std::pair<count,count>> CurrentFlowGroupCloseness::coarsing_indices(count cDegree, bool Random){
+    std::vector<std::pair<count,count>> CurrentFlowGroupCloseness::coarsingIndices(count cDegree, bool Random){
         bool s_found;
 
         count c_index;
         count s_index;
-        count k;
+        count l;
 
         node c;
         /*free supernodes*/
@@ -380,16 +342,16 @@ namespace NetworKit {
           c=vList[c_index];
           if(s_List[c_index]){
             s_found=false;
-            k=0;
+            l=0;
             while(!(s_found)&&(k<TopMatch[c].size())){
-              s_index=reverse[TopMatch[c][k]];
+              s_index=reverse[TopMatch[c][l]];
               if(s_List[s_index]){
                 s_List[s_index]=false;
                 s_found=true;
                 indices.push_back(std::make_pair(c_index,s_index));
               }
               else{
-                k++;
+                l++;
               }
             }
           }
@@ -406,7 +368,7 @@ namespace NetworKit {
       v_TopMatch = LevelList[ID].get_vecofTopmatch(v);
       v_Adj = LevelList[ID-1].get_CalofAdj(v);
       s_Adj = LevelList[ID-1].get_CalofAdj(s);
-      first_join(s,v);
+      firstJoin(s,v);
       vList.push_back (v);
       LevelList[ID].set_i_j_ofAdj(s,v,s_Adj(v));
 
@@ -414,22 +376,21 @@ namespace NetworKit {
         w=v_TopMatch[i];
         if(v_Adj(w)!=0){
           if(s_Adj(w)!=0){
-            edge_fire(v,w);
+            edgeFire(v,w);
             LevelList[ID].set_i_j_ofAdj(v,w,v_Adj(w));
             LevelList[ID].set_i_j_ofAdj(v,w,s_Adj(w)-v_Adj(w));
           }
           else{
-            edge_fire(v,w);
+            edgeFire(v,w);
             LevelList[ID].set_i_j_ofAdj(v,w,v_Adj(w));
-            non_bridge_delete(s,w);
+            nonBridgeDelete(s,w);
             LevelList[ID].set_i_j_ofAdj(v,w,0.);
           }
         }
       }
     }
     /***************************************************************************/
-    /***************************************************************************/
-    count CurrentFlowGroupCloseness::merge_peripheral_nodes(){
+    count CurrentFlowGroupCloseness::mergePeripheralNodes(){
       node s;
       node v;
       std::vector<std::pair<node,node>> merge;
@@ -449,15 +410,15 @@ namespace NetworKit {
       for(count i=0;i<merge.size();i++){
         v=merge[i].first;
         s=merge[i].second;
-        first_join_peripheral(s,v,merge_value[s]);
+        firstJoinPeripheral(s,v,merge_value[s]);
         LevelList[1].set_i_j_ofAdj(s,v,merge_value[s]);
         vList.push_back (v);
       }
       return merge.size();
     }
     /***************************************************************************/
-    void CurrentFlowGroupCloseness::coarse_L(std::vector<std::pair<count,count>> Matchings){
-      count k;
+    void CurrentFlowGroupCloseness::coarseLaplacian(std::vector<std::pair<count,count>> Matchings){
+      count a;
       count l;
       /*s=supernode - c = to be coarsed node - w = adjacent node to c*/
       node s;
@@ -488,33 +449,25 @@ namespace NetworKit {
         Adj(vList[c],vList[s])=0;
       }
       arma::uvec indices(vList.size()-Matchings.size());
-      k=0;
+      a=0;
       l=0;
       for(count i=0;i<vList.size();i++){
         if(Matchings[l].first==i){
           l++;
         }
         else{
-          indices(k)=i;
-          k++;
+          indices(a)=i;
+          a++;
         }
       }
       for(count i=0;i<Matchings.size();i++){
         vList.erase(vList.begin()+Matchings[i].first-i);
       }
-
       L=L.submat(indices, indices);
+
     }
     /**************************************************************************/
-    void CurrentFlowGroupCloseness::first_join(node s, node v){
-      node w;
-      for(count i=0;i<vList.size();i++){
-        w=vList[i];
-        ERD(w,v)=ERD(w,s)+1.;
-        ERD(v,w)=ERD(w,v);
-      }
-    }
-    void CurrentFlowGroupCloseness::first_join_peripheral(node s, node v,count multiplier){
+    void CurrentFlowGroupCloseness::firstJoinPeripheral(node s, node v,count multiplier){
       node w;
       for(count i=0;i<vList.size();i++){
         w=vList[i];
@@ -523,7 +476,16 @@ namespace NetworKit {
       }
     }
     /**************************************************************************/
-    void CurrentFlowGroupCloseness::edge_fire(node v, node w){
+    void CurrentFlowGroupCloseness::firstJoin(node s, node v){
+      node w;
+      for(count i=0;i<vList.size();i++){
+        w=vList[i];
+        ERD(w,v)=ERD(w,s)+1.;
+        ERD(v,w)=ERD(w,v);
+      }
+    }
+    /**************************************************************************/
+  void CurrentFlowGroupCloseness::edgeFire(node v, node w){
       node x;
       node y;
       double fix_factor;
@@ -546,28 +508,29 @@ namespace NetworKit {
       }
       ERD=ERD2;
     }
-    /**************************************************************************/
-    void CurrentFlowGroupCloseness::non_bridge_delete(node v,node w){
-      node x;
-      node y;
-      double fix_factor;
-      arma::Mat<double> ERD2;
 
-      fix_factor=4.*(1.-ERD(v,w));
-      ERD2 = ERD;
+  /**************************************************************************/
+  void CurrentFlowGroupCloseness::nonBridgeDelete(node v,node w){
+    node x;
+    node y;
+    double fix_factor;
+    arma::Mat<double> ERD2;
 
-      for(count i=0;i<vList.size();i++){
-        x=vList[i];
-        for(count j=i+1;j<vList.size();j++){
-          y=vList[j];
-          ERD2(x,y)=ERD(x,w)-ERD(x,v);
-          ERD2(x,y)-=ERD(w,y)-ERD(v,y);
-          ERD2(x,y)*=ERD2(x,y);
-          ERD2(x,y)/=fix_factor;
-          ERD2(x,y)=ERD(x,y)+ERD2(x,y);
-          ERD2(y,x)=ERD2(x,y);
-        }
+    fix_factor=4.*(1.-ERD(v,w));
+    ERD2 = ERD;
+
+    for(count i=0;i<vList.size();i++){
+      x=vList[i];
+      for(count j=i+1;j<vList.size();j++){
+        y=vList[j];
+        ERD2(x,y)=ERD(x,w)-ERD(x,v);
+        ERD2(x,y)-=ERD(w,y)-ERD(v,y);
+        ERD2(x,y)*=ERD2(x,y);
+        ERD2(x,y)/=fix_factor;
+        ERD2(x,y)=ERD(x,y)+ERD2(x,y);
+        ERD2(y,x)=ERD2(x,y);
       }
-      ERD=ERD2;
     }
+    ERD=ERD2;
+  }
 } /* namespace NetworKit*/

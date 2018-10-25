@@ -10,8 +10,7 @@
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
-/* no such file availabe */
-/* #include "EffectiveResistanceDistance.h" */
+#include "EffectiveResistanceDistance.h"
 #include "ERD2.h"
 #include "ERDLevel.h"
 #include <armadillo>
@@ -23,53 +22,66 @@ namespace NetworKit {
     class CurrentFlowGroupCloseness: public NetworKit::Centrality {
 
     public:
-
-        CurrentFlowGroupCloseness(const Graph& G, const double epsilon=0.1, const double delta=0.1, const count groupsize = 2,const count upperDegreeBound = 1);
-
+        /**
+         *
+         * @param G An connected unweighted graph.
+         * @param k Size of the group of nodes
+         * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
+         * @
+       */
+        CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2);
+        /**
+        * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
+        */
         void run();
-
-        void setCFGCC(double newCFGCC);
+        /**
+        * Returns group of size k with maximum closeness.
+        */
         std::vector<node> getNodesofGroup();
+        /**
+        * Returns maximum current flow group closeness
+        */
         double getCFGCC();
-        void update_CFGCC(count n_peripheral_merges);
+        /**
+        *Computes value for given group
+        */
 
-        void compute_initial_ERD(count upperDegreeBound);
-        void compute_ERD();
-        void first_join(node s, node v);
-        void first_join_peripheral(node s, node v,count multiplier);
-        void edge_fire(node v, node w);
-        void non_bridge_delete(node v,node w);
-        void coarse_L(std::vector<std::pair<count,count>> indices);
-        void uncoarse_L();
-        void clean_network();
-        void uncoarse(node s,node v,count ID);
-
-        std::vector<std::pair<node,node>> update_Matching(std::vector<std::pair<count,count>> indices);
-        std::vector<std::pair<count,count>> peripheral_indices();
-        std::vector<std::pair<count,count>> coarsing_indices(count cDegree,bool Random);
-        std::vector<std::vector<node>> update_TopMatch(count minDegree);
-        count update_minDegree(count minDegree);
-        std::pair<node,node> random_edge();
-        count merge_peripheral_nodes();
 
 
     private:
+
+        count k=2;
+        count CB=2;
         count n;
-        double epsilon;
-        double delta;
-        count groupsize;
-        count upperDegreeBound;
 
         double CFGCC;
         std::vector<node> S;
+
         std::vector<node> vList;
         std::vector<std::vector<node>> TopMatch;
         std::vector<ERDLevel> LevelList;
         arma::Mat<double> ERD;
         arma::Mat<double> L;
         arma::Mat<double> Adj;
-    };
 
+        void cleanNetwork();
+        void greedy(count n_peripheral_merges);
+        void computeInitialERD(count upperDegreeBound);
+        void computeERD();
+        std::vector<std::vector<node>> updateTopMatch(count minDegree);
+        count updateMinDegree(count minDegree);
+        std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
+        std::vector<std::pair<count,count>> peripheralCoarsingIndices();
+        std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
+        void uncoarse(node s,node v,count ID);
+        count mergePeripheralNodes();
+        void coarseLaplacian(std::vector<std::pair<count,count>> indices);
+        void firstJoinPeripheral(node s, node v,count multiplier);
+        void firstJoin(node s, node v);
+        void edgeFire(node v, node w);
+        void nonBridgeDelete(node v,node w);
+
+    };
 
 } /* namespace NetworKit */
 #endif /* CURRENTFLOWGROUPCLOSENESS_H_ */
