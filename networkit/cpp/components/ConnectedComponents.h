@@ -9,7 +9,6 @@
 #define CONNECTEDCOMPONENTS_H_
 
 #include "../graph/Graph.h"
-#include "../distance/BFS.h"
 #include "../structures/Partition.h"
 #include "../base/Algorithm.h"
 #include <unordered_set>
@@ -46,7 +45,7 @@ public:
 	 *
 	 * @param[in]	u	The node whose component is asked for.
 	 */
-	count componentOfNode(node u);
+	count componentOfNode(node u) const;
 
 
 	/**
@@ -74,7 +73,7 @@ private:
 	bool hasRun;
 };
 
-inline count ConnectedComponents::componentOfNode(node u) {
+inline count ConnectedComponents::componentOfNode(node u) const {
 	assert (component[u] != none);
 	if (!hasRun) throw std::runtime_error("run method has not been called");
 	return component[u];

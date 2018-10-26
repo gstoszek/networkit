@@ -7,7 +7,9 @@
 
 #include "Partition.h"
 #include "../auxiliary/Parallel.h"
+#include <algorithm>
 #include <atomic>
+#include <memory>
 
 namespace NetworKit {
 
@@ -70,7 +72,7 @@ bool Partition::isOnePartition(Graph& G) { //FIXME what for is elements needed? 
 
 count Partition::numberOfSubsets() const {
 	auto n = upperBound();
-	std::vector<std::atomic<bool>> exists(n); // a boolean vector would not be thread-safe
+	std::unique_ptr<std::atomic<bool>[]> exists(new std::atomic<bool>[n]{}); // a boolean vector would not be thread-safe
 	this->parallelForEntries([&](index e, index s) {
 		if (s != none) {
 			exists[s] = true;
@@ -78,7 +80,7 @@ count Partition::numberOfSubsets() const {
 	});
 	count k = 0; // number of actually existing clusters
 	#pragma omp parallel for reduction(+:k)
-	for (index i = 0; i < n; ++i) {
+	for (omp_index i = 0; i < static_cast<omp_index>(n); ++i) {
 		if (exists[i]) {
 			k++;
 		}

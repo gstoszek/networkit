@@ -6,14 +6,14 @@
 
 #include "CurveballImpl.h"
 
-#include <cassert>
 #include <algorithm>
+#include <cassert>
+#include <numeric>
 #include <vector>
 
 #include "../auxiliary/Timer.h"
 #include "../auxiliary/SignalHandling.h"
-#include "../auxiliary/RandomBipartitionShuffle.h"
-
+#include <tlx/algorithm/random_bipartition_shuffle.hpp>
 
 namespace NetworKit {
 namespace CurveballDetails {
@@ -52,7 +52,7 @@ void CurveballAdjacencyList::initialize(const degree_vector& degrees,
     for (const count node_degree : degrees) {
         begins[node_id] = sum;
 
-        assert(node_degree > 0);
+        //assert(node_degree > 0);
 
         sum += node_degree;
         neighbours[sum] = LISTROW_END;
@@ -528,7 +528,7 @@ void CurveballIM::run(const trade_vector& trades) {
         adjList.resetRow(u);
         adjList.resetRow(v);
 
-        Aux::random_bipartition_shuffle(disjoint_neighbours.begin(), disjoint_neighbours.end(),
+        tlx::random_bipartition_shuffle(disjoint_neighbours.begin(), disjoint_neighbours.end(),
                          u_setsize, urng);
 
         // Assign first u_setsize to u and last v_setsize to v

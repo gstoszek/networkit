@@ -5,18 +5,44 @@
  *      Author: Klara Reichard (klara.reichard@gmail.com), Marvin Ritter (marvin.ritter@gmail.com)
  */
 
-#ifndef NOGTEST
+#include <gtest/gtest.h>
 
+#include <tuple>
 #include <algorithm>
 
-#include "GraphGTest.h"
+#include "../Graph.h"
+
 #include "../GraphBuilder.h"
 #include "../../io/METISGraphReader.h"
 #include "../../auxiliary/NumericTools.h"
 #include "../../distance/DynBFS.h"
 #include "../../auxiliary/Parallel.h"
+#include "../../generators/ErdosRenyiGenerator.h"
 
 namespace NetworKit {
+
+class GraphGTest: public testing::TestWithParam< std::tuple<bool, bool> > {
+public:
+	virtual void SetUp();
+
+protected:
+	Graph Ghouse;
+	std::vector< std::pair<node, node> > houseEdgesOut;
+	std::vector< std::vector<edgeweight> > Ahouse;
+	count n_house;
+	count m_house;
+
+	bool isGraph() const { return !isWeighted() && !isDirected(); }
+	bool isWeightedGraph() const { return isWeighted() && !isDirected(); }
+	bool isDirectedGraph() const { return !isWeighted() && isDirected(); }
+	bool isWeightedDirectedGraph() const { return isWeighted() && isDirected(); }
+
+
+	bool isWeighted() const;
+	bool isDirected() const;
+	Graph createGraph(count n = 0) const;
+	count countSelfLoopsManually(const Graph &G);
+};
 
 INSTANTIATE_TEST_CASE_P(InstantiationName, GraphGTest, testing::Values(
 						std::make_tuple(false, false),
@@ -731,6 +757,27 @@ TEST_P(GraphGTest, testRemoveEdge) {
 	EXPECT_FALSE(G.hasEdge(1, 1));
 	EXPECT_TRUE(G.hasEdge(0, 1));
 	EXPECT_EQ(0u, G.numberOfSelfLoops())   << "Weighted, directed: " << G.isWeighted() << ", " << G.isDirected();
+}
+
+TEST_P(GraphGTest, testRemoveAllEdges) {
+	Graph g = ErdosRenyiGenerator(20, 0.1, false).generate();
+	g.removeAllEdges();
+	EXPECT_EQ(g.numberOfEdges(), 0);
+	EXPECT_EQ(g.edges().size(), 0);
+	for (node u : g.nodes()) {
+		EXPECT_EQ(g.neighbors(u).size(), 0);
+		EXPECT_EQ(g.degree(u), 0);
+	}
+
+	g = ErdosRenyiGenerator(20, 0.1, true).generate();
+	g.removeAllEdges();
+	EXPECT_EQ(g.numberOfEdges(), 0);
+	EXPECT_EQ(g.edges().size(), 0);
+	for (node u : g.nodes()) {
+		EXPECT_EQ(g.neighbors(u).size(), 0);
+		EXPECT_EQ(g.degree(u), 0);
+		EXPECT_EQ(g.degreeIn(u), 0);
+	}
 }
 
 TEST_P(GraphGTest, testRemoveSelfLoops) {
@@ -2158,5 +2205,3 @@ TEST_P(GraphGTest, testSortEdges) {
 }
 
 } /* namespace NetworKit */
-
-#endif /*NOGTEST */
