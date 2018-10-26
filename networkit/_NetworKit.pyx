@@ -6669,7 +6669,23 @@ cdef class GroupCloseness(Algorithm):
 		"""
 		return (<_GroupCloseness*>(self._this)).scoreOfGroup(group)
 
+cdef extern from "cpp/centrality/CurrentFlowGroupCloseness.h":
+	cdef cppclass _CurrentFlowGroupCloseness "NetworKit::CurrentFlowGroupCloseness"(_Centrality):
+		_CurrentFlowGroupCloseness(_Graph G, count, count) except +
+		vector[node] getNodesofGroup() except +
+		double getCFGCC() except +
 
+cdef class CurrentFlowGroupCloseness(Centrality):
+	"""
+	"""
+	def __cinit__(self, Graph G, k=1, H=0):
+		self._this = new _CurrentFlowGroupCloseness(G._this, k, H)
+
+	def getNodesofGroup(self):
+		return (<_CurrentFlowGroupCloseness*>(self._this)).getNodesofGroup()
+
+	def getCFGCC(self):
+		return (<_CurrentFlowGroupCloseness*>(self._this)).getCFGCC()
 
 cdef extern from "cpp/centrality/DegreeCentrality.h":
 	cdef cppclass _DegreeCentrality "NetworKit::DegreeCentrality" (_Centrality):
@@ -7093,11 +7109,11 @@ cdef class KadabraBetweenness(Algorithm):
 		within the error guarantee.
 	k : count
 		The number of top-k nodes to be computed. Set it to zero to
-		approximate the betweenness centrality of all the nodes.	
+		approximate the betweenness centrality of all the nodes.
 	unionSample : count
-		Algorithm parameter # TODO: more details 
+		Algorithm parameter # TODO: more details
 	startFactor : count
-		Algorithm parameter # TODO: more details 
+		Algorithm parameter # TODO: more details
 	"""
 
 	def __cinit__(self, Graph G, err = 0.01, delta = 0.1, k = 0,
@@ -7165,7 +7181,7 @@ cdef class KadabraBetweenness(Algorithm):
 			The total number of shortest paths sampled by the algorithm.
 		"""
 		return (<_KadabraBetweenness*>(self._this)).getNumberOfIterations()
-	
+
 	def getOmega(self):
 		"""
 		Returns the upper bound of the required number of samples.
