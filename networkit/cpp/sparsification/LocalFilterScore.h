@@ -10,6 +10,8 @@
 
 #include "../edgescores/EdgeScore.h"
 #include "../auxiliary/Parallel.h"
+#include <atomic>
+#include <memory>
 
 namespace NetworKit {
 
@@ -46,7 +48,7 @@ public:
 		* such that the edge is contained in the sparse graph.
 		*/
 
-		std::vector<std::atomic<double>> sparsificationExp(G.upperEdgeIdBound());
+		std::unique_ptr<std::atomic<double>[]> sparsificationExp(new std::atomic<double>[G.upperEdgeIdBound()]{});
 
 		G.balancedParallelForNodes([&](node i) {
 			count d = G.degree(i);
@@ -97,7 +99,7 @@ public:
 		scoreData.resize(G.upperEdgeIdBound());
 
 		#pragma omp parallel for
-		for (index i = 0; i < scoreData.size(); ++i) {
+		for (omp_index i = 0; i < static_cast<omp_index>(scoreData.size()); ++i) {
 			scoreData[i] = sparsificationExp[i];
 		}
 

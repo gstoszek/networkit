@@ -5,14 +5,12 @@ Dy * GeneratorsTest.cpp
  *      Author: cls
  */
 
-#ifndef NOGTEST
-
-
-#include "GeneratorsGTest.h"
+#include <gtest/gtest.h>
 
 #include <numeric>
 #include <cmath>
 
+#include "../ClusteredRandomGraphGenerator.h"
 #include "../DynamicGraphSource.h"
 #include "../DynamicBarabasiAlbertGenerator.h"
 #include "../PubWebGenerator.h"
@@ -31,7 +29,10 @@ Dy * GeneratorsTest.cpp
 #include "../StochasticBlockmodel.h"
 #include "../EdgeSwitchingMarkovChainGenerator.h"
 #include "../LFRGenerator.h"
-
+#include "../MocnikGenerator.h"
+#include "../MocnikGeneratorBasic.h"
+#include "../HyperbolicGenerator.h"
+#include "../DynamicHyperbolicGenerator.h"
 
 #include "../../viz/PostscriptWriter.h"
 #include "../../community/ClusteringGenerator.h"
@@ -53,8 +54,28 @@ Dy * GeneratorsTest.cpp
 
 namespace NetworKit {
 
-GeneratorsGTest::GeneratorsGTest() {
+class GeneratorsGTest: public testing::Test {
+public:
+	vector<double> getAngles(DynamicHyperbolicGenerator dynGen) {
+		return dynGen.angles;
+	}
 
+	vector<double> getRadii(DynamicHyperbolicGenerator dynGen) {
+		return dynGen.radii;
+	}
+
+};
+
+TEST_F(GeneratorsGTest, testClusteredRandomGraphGenerator) {
+	Aux::Random::setSeed(42, false);
+	const count n = 100, c = 10;
+	const double pin = 0.5, pout = 0.01;
+	ClusteredRandomGraphGenerator gen(n, c, pin, pout);
+	Graph G = gen.generate();
+	Partition part = gen.getCommunities();
+	count nCommunities = part.getSubsetIds().size();
+	EXPECT_EQ(n, G.upperNodeIdBound());
+	EXPECT_TRUE(nCommunities >= 1 && nCommunities <= c);
 }
 
 TEST_F(GeneratorsGTest, testDynamicBarabasiAlbertGeneratorSingleStep) {
@@ -801,7 +822,7 @@ TEST_F(GeneratorsGTest, testHyperbolicPointGeneration) {
 	HyperbolicSpace::fillPoints(angles, radii, R, alpha);
 	for (index i = 0; i < n; i++) {
 		EXPECT_GE(angles[i], 0);
-		EXPECT_LT(angles[i], 2*M_PI);
+		EXPECT_LT(angles[i], 2*PI);
 		EXPECT_GE(radii[i], 0);
 		EXPECT_LE(radii[i], R);
 	}
@@ -1068,7 +1089,32 @@ TEST_F(GeneratorsGTest, testLFRGeneratorWithRealData) {
 	EXPECT_EQ(C.numberOfSubsets(),gen.getPartition().numberOfSubsets());
 }
 
+TEST_F(GeneratorsGTest, testMocnikGenerator) {
+	count dim = 3;
+	count n = 10000;
+	double k = 2.6;
+
+	MocnikGenerator Mocnik(dim, n, k);
+	Graph G(0);
+	EXPECT_TRUE(G.isEmpty());
+	G = Mocnik.generate();
+	EXPECT_FALSE(G.isEmpty());
+	EXPECT_EQ(G.numberOfNodes(), n);
+	EXPECT_NEAR(G.numberOfEdges() * 1. / G.numberOfNodes(), std::pow(k, dim), 20000);
+}
+
+TEST_F(GeneratorsGTest, testMocnikGeneratorBasic) {
+	count dim = 3;
+	count n = 5000;
+	double k = 2.6;
+
+	MocnikGenerator Mocnik(dim, n, k);
+	Graph G(0);
+	EXPECT_TRUE(G.isEmpty());
+	G = Mocnik.generate();
+	EXPECT_FALSE(G.isEmpty());
+	EXPECT_EQ(G.numberOfNodes(), n);
+	EXPECT_NEAR(G.numberOfEdges() * 1. / G.numberOfNodes(), std::pow(k, dim), 10000);
+}
 
 } /* namespace NetworKit */
-
-#endif /*NOGTEST */
