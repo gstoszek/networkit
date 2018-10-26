@@ -10,8 +10,7 @@
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
-//#include "EffectiveResistanceDistance.h"
-#include "ERD2.h"
+#include "EffectiveResistanceDistance.h"
 #include "ERDLevel.h"
 #include <armadillo>
 
@@ -28,23 +27,23 @@ namespace NetworKit {
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
          * @
-       */
+         */
         CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2);
         /**
-        * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
-        */
+         * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
+         */
         void run();
         /**
-        * Returns group of size k with maximum closeness.
-        */
+         * Returns group of size k with maximum closeness.
+         */
         std::vector<node> getNodesofGroup();
         /**
-        * Returns maximum current flow group closeness
-        */
+         * Returns maximum current flow group closeness
+         */
         double getCFGCC();
         /**
-        *Computes value for given group
-        */
+         *Computes value for given group
+         */
 
 
 
@@ -60,14 +59,15 @@ namespace NetworKit {
         std::vector<node> vList;
         std::vector<std::vector<node>> TopMatch;
         std::vector<ERDLevel> LevelList;
-        arma::Mat<double> ERD;
+
+        EffectiveResistanceDistance ERD;
+
         arma::Mat<double> L;
         arma::Mat<double> Adj;
 
         void cleanNetwork();
         void greedy(count n_peripheral_merges);
         void computeInitialERD(count upperDegreeBound);
-        void computeERD();
         std::vector<std::vector<node>> updateTopMatch(count minDegree);
         count updateMinDegree(count minDegree);
         std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
@@ -76,10 +76,7 @@ namespace NetworKit {
         void uncoarse(node s,node v,count ID);
         count mergePeripheralNodes();
         void coarseLaplacian(std::vector<std::pair<count,count>> indices);
-        void firstJoinPeripheral(node s, node v,count multiplier);
-        void firstJoin(node s, node v);
-        void edgeFire(node v, node w);
-        void nonBridgeDelete(node v,node w);
+
 
     };
 
