@@ -19,15 +19,13 @@ namespace NetworKit {
     {
     public:
 
-        ERDLevel(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch, arma::Mat<double> Adj);
+        ERDLevel(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch);
 
-        void set(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch, arma::Mat<double> Adj);
+        void set(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch);
         void set_ID(count ID);
         void set_vList(std::vector<node> vList);
         void set_Matching(std::vector<std::pair<node,node>> Matching);
         void set_TopMatch(std::vector<std::vector<node>> TopMatch);
-        void set_Adj(arma::Mat<double> Adj);
-        void set_i_j_ofAdj(count i,count j,double value);
 
         void print();
         count get_ID();
@@ -35,8 +33,6 @@ namespace NetworKit {
         std::vector<std::pair<node,node>> get_Matching();
         std::vector<std::vector<node>> get_TopMatch();
         std::vector<node> get_vecofTopmatch(node v);
-        arma::Mat<double> get_Adj();
-        arma::vec get_CalofAdj(node v);
 
         ~ERDLevel() {};
 
@@ -46,7 +42,6 @@ namespace NetworKit {
         std::vector<node> LevelvList;
         std::vector<std::pair<node,node>> LevelMatching;
         std::vector<std::vector<node>> LevelTopMatch;
-        arma::Mat<double> LevelAdj;
     };
 
 

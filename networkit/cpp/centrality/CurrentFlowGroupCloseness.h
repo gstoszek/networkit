@@ -12,7 +12,9 @@
 #include "../numerics/LAMG/Lamg.h"
 #include "EffectiveResistanceDistance.h"
 #include "ERDLevel.h"
+#include "../components/ConnectedComponents.h"
 #include <armadillo>
+#include <algorithm>
 
 namespace NetworKit {
     /*
@@ -26,9 +28,8 @@ namespace NetworKit {
          * @param G An connected unweighted graph.
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
-         * @
          */
-        CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2);
+        CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1);
         /**
          * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
          */
@@ -54,6 +55,7 @@ namespace NetworKit {
         count n;
 
         double CFGCC;
+        double epsilon;
         std::vector<node> S;
 
         std::vector<node> vList;
@@ -63,11 +65,9 @@ namespace NetworKit {
         EffectiveResistanceDistance ERD;
 
         arma::Mat<double> L;
-        arma::Mat<double> Adj;
 
         void cleanNetwork();
         void greedy(count n_peripheral_merges);
-        void computeInitialERD(count upperDegreeBound);
         std::vector<std::vector<node>> updateTopMatch(count minDegree);
         count updateMinDegree(count minDegree);
         std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
