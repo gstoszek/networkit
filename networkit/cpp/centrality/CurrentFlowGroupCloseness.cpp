@@ -25,11 +25,11 @@ namespace NetworKit {
      ConnectedComponents cc(G);
      cc.run();
      if (cc.getPartition().numberOfSubsets() > 1) throw std::runtime_error("Graph has more then one component!");
-     if(k>=G.upperNodeIdBound()) throw std::runtime_error("Size of Group greater then number of nodes!");
+     if(k>=G.numberOfNodes()) throw std::runtime_error("Size of Group greater then number of nodes!");
 
      S.resize(k);
      CFGCC = 0.;
-     n=G.upperNodeIdBound();
+     n=G.numberOfNodes();
      vList.resize(n);
      TopMatch.resize(n);
      L.set_size(n,n);
@@ -92,6 +92,7 @@ namespace NetworKit {
             TopMatch=updateTopMatch(minDegree);
           }
           */
+
         }
         L=arma::pinv(L,0.01);
         ERD.computeFromPinvL(L,vList);
@@ -140,9 +141,9 @@ namespace NetworKit {
       }
       void CurrentFlowGroupCloseness::greedy(count nPeripheralMerges){
         count sampleSize;
-        node s;
-        node s_next;
         node v;
+        node w;
+        node s;
         double centrality;
         std::vector<bool> V;
         std::vector<double> mindst;
@@ -154,56 +155,48 @@ namespace NetworKit {
         vecOfSamples = vList;
         vecOfSamples.erase(vecOfSamples.end()-nPeripheralMerges, vecOfSamples.end());
         sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
+
         if(sampleSize>vecOfSamples.size()){sampleSize=vecOfSamples.size();}
+
         CFGCC=ERD.M.max()*n;
-        V.resize(vList.size(),true);
-        mindst.resize(G.upperNodeIdBound(),ERD.M.max());
-        zeroVec.resize(G.upperNodeIdBound(),0.);
+        V.resize(G.numberOfNodes(),true);
+        mindst.resize(G.numberOfNodes(),ERD.M.max());
+        zeroVec.resize(G.numberOfNodes(),0.);
 
         std::cout<< sampleSize << "\n";
+
         for(count i=0;i<k;i++){
           std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
-          for (count j=0; j<vList.size()-nPeripheralMerges;j++) {
+          for (count j=0; j<vecOfSamples.size();j++) {
             if(V[vList[j]]){
-              s=vList[j];
-              dst=zeroVec;
+              v=vList[j];
+              dst=mindst;
               centrality = 0.;
               for (count l = 0; l < sampleSize; l++) {
-                v=vecOfSamples[l];
-                if (ERD.M(s,v)< mindst[v]){
-                  centrality += ERD.M(s,v);
-                  dst[v]=ERD.M(s,v);
-                }
-                else {
-                  centrality += mindst[v];
-                  dst[v]=mindst[v];
-                }
+                w=vList[l];
+                if (ERD.M(v,w)< mindst[w])
+                  dst[w]=ERD.M(v,w);
+                centrality +=dst[w];
               }
               centrality*=((double)(vecOfSamples.size())/(double)(sampleSize));
+              std::cout<< centrality << "\n";
               for (count l = 0 ; l < nPeripheralMerges; l++) {
-                //std::cout << vList.size() <<" vs "<< nPeripheralMerges<<"\n";
-                v=vList[vecOfSamples.size()+l];
-                if (ERD.M(s,v)< mindst[v]){
-                  centrality += ERD.M(s,v);
-                  dst[v]=ERD.M(s,v);
-                }
-                else {
-                  centrality += mindst[v];
-                  dst[v]=mindst[v];
-                }
+                w=vList[vList.size()-nPeripheralMerges+l];
+                if (ERD.M(v,w)< mindst[w])
+                  dst[w]=ERD.M(v,w);
+                centrality += dst[w];
               }
               if (centrality < CFGCC) {
                 CFGCC = centrality;
                 bst=dst;
-                s_next = s;
+                s = v;
               }
             }
           }
-          S[i]=s_next;
-          V[s_next]=false;
+          S[i]=s;
+          V[s]=false;
           mindst=bst;
         }
-        std::cout << CFGCC << "\n";
         CFGCC = (double)(n)/CFGCC;
       }
 
@@ -214,7 +207,7 @@ namespace NetworKit {
       node v;
       node w;
       std::vector<std::vector<node>> update_List;
-      update_List.resize(G.upperNodeIdBound());
+      update_List.resize(G.numberOfNodes());
       for(count i=0;i<vList.size();i++){
         v=vList[i];
         if(L(i,i)==minDegree){
@@ -280,7 +273,7 @@ namespace NetworKit {
 
       std::vector<std::pair<count,count>> indices;
       std::vector<count> reverse;
-      reverse.resize(G.upperNodeIdBound());
+      reverse.resize(G.numberOfNodes());
       for(count i=0;i<vList.size();i++){
         reverse[vList[i]]=i;
       }
@@ -309,7 +302,7 @@ namespace NetworKit {
         std::vector<count> c_List;
         /*c_index-s_index mapping*/
         std::vector<count> reverse;
-        reverse.resize(G.upperNodeIdBound());
+        reverse.resize(G.numberOfNodes());
         for(count i=0;i<vList.size();i++){
           reverse[vList[i]]=i;
         }
@@ -317,7 +310,7 @@ namespace NetworKit {
 
 
         c_List.resize(0);
-        s_List.resize(G.upperNodeIdBound(),true);
+        s_List.resize(G.numberOfNodes(),true);
         /*potential candidates*/
         for(count i=0;i<L.n_rows;i++){
           if(L(i,i)==cDegree){
@@ -379,7 +372,7 @@ namespace NetworKit {
       std::vector<count> merge_value;
 
       Matching=LevelList[1].get_Matching();
-      merge_value.resize(G.upperNodeIdBound(),0);
+      merge_value.resize(G.numberOfNodes(),0);
       for(count i=0;i<Matching.size();i++){
         v=Matching[i].first;
         s=Matching[i].second;
@@ -406,7 +399,7 @@ namespace NetworKit {
       node w;
 
       std::vector<count> reverse;
-      reverse.resize(G.upperNodeIdBound());
+      reverse.resize(G.numberOfNodes());
       for(count i=0;i<vList.size();i++){
         reverse[vList[i]]=i;
       }

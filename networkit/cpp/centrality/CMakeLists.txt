@@ -30,7 +30,6 @@ networkit_add_module(centrality
     TopCloseness.cpp
     TopHarmonicCloseness.cpp
 	  CurrentFlowGroupCloseness.cpp
-	  ERD2.cpp
 	  ERDLevel.cpp
 	  EffectiveResistanceDistance.cpp
     )

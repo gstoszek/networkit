@@ -8,7 +8,6 @@
 #define ERDLEVEL_H_
 
 #include "Centrality.h"
-#include "ERD2.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
 #include <armadillo>

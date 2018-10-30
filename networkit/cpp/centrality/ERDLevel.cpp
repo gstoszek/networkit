@@ -5,7 +5,6 @@
 */
 
 #include "ERDLevel.h"
-#include "ERD2.h"
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
