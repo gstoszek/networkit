@@ -42,7 +42,7 @@ namespace NetworKit {
        *executes edge fire operation
        *
        *@param vecOfNodes, expect a vector of nodes with equal size as Laplacian
-       *@param s and v, nodes of added edges
+       *@param v and w, nodes of added edges
        *@param edgeWeight, weight of edge reintroduced
        */
       void edgeFire(std::vector<node> vecOfNodes,node v, node w,double edgeWeight);
@@ -54,6 +54,15 @@ namespace NetworKit {
        *@param edgeWeight, weight of edge reintroduced
        */
       void nonBridgeDelete(std::vector<node> vecOfNodes,node v, node w,double edgeWeight);
+      /**
+       *executes edge fire and non bridge delete operation in one step
+       *
+       *@param vecOfNodes, expect a vector of nodes with equal size as Laplacian
+       *@param u,v and w, nodes of added edge [v,w] and deleted edge [u,w]
+       *@param edgeWeightOne, weight of edge [v,w]
+       *@param edgeWeightTwo, weight of edge [u,w]
+       */
+      void corollary(std::vector<node> vecOfNodes,node u, node v, node w,double edgeWeightOne,double edgeWeightTwo);
       /**
        *EffectiveResistanceDistanceMatrice
        */

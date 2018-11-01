@@ -58,7 +58,7 @@ namespace NetworKit {
         double epsilon;
         std::vector<node> S;
 
-        std::vector<node> vList;
+        std::vector<node> vecOfNodes;
         std::vector<std::vector<node>> TopMatch;
         std::vector<ERDLevel> LevelList;
 
@@ -66,14 +66,13 @@ namespace NetworKit {
 
         arma::Mat<double> L;
 
-        void cleanNetwork();
         void greedy(count n_peripheral_merges);
         std::vector<std::vector<node>> updateTopMatch(count minDegree);
         count updateMinDegree(count minDegree);
         std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
         std::vector<std::pair<count,count>> peripheralCoarsingIndices();
         std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
-        void uncoarse(node s,node v,count ID);
+        void uncoarseEfffectiveResistanceDistanceMatrix(node s,node v,count ID);
         count mergePeripheralNodes();
         void coarseLaplacian(std::vector<std::pair<count,count>> indices);
 

@@ -17,11 +17,11 @@
 
 namespace NetworKit {
 
-  ERDLevel::ERDLevel(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch){
+  ERDLevel::ERDLevel(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> Adj){
     LevelID=ID;
     LevelvList=vList;
     LevelMatching=Matching;
-    LevelTopMatch=TopMatch;
+    LevelAdj=Adj;
   }
 
   void ERDLevel::print(){
@@ -44,11 +44,11 @@ namespace NetworKit {
       std::cout <<  LevelMatching[LevelMatching.size()-1].second <<"\n";
     }
   }
-  void ERDLevel::set(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> TopMatch){
+  void ERDLevel::set(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> Adj){
     LevelID=ID;
     LevelvList=vList;
     LevelMatching=Matching;
-    LevelTopMatch=TopMatch;
+    LevelAdj=Adj;
   }
   void ERDLevel::set_ID(count ID){
     LevelID=ID;
@@ -61,8 +61,8 @@ namespace NetworKit {
   void ERDLevel::set_Matching(std::vector<std::pair<node,node>> Matching){
     LevelMatching=Matching;
   }
-  void ERDLevel::set_TopMatch(std::vector<std::vector<node>> TopMatch){
-    LevelTopMatch=TopMatch;
+  void ERDLevel::set_TopMatch(std::vector<std::vector<node>> Adj){
+    LevelAdj=Adj;
   }
   count ERDLevel::get_ID(){
     return LevelID;
@@ -74,9 +74,9 @@ namespace NetworKit {
     return LevelMatching;
   }
   std::vector<std::vector<node>> ERDLevel::get_TopMatch(){
-    return LevelTopMatch;
+    return LevelAdj;
   }
-  std::vector<node> ERDLevel::get_vecofTopmatch(node v){
-    return LevelTopMatch[v];
+  std::vector<node> ERDLevel::getVecOfAdj(node v){
+    return LevelAdj[v];
   }
 } /* namespace NetworKit*/

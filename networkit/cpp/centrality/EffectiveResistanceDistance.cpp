@@ -73,7 +73,7 @@ namespace NetworKit {
     double fixFactor;
     arma::Mat<double> M2;
 
-    fixFactor=4.*(1.-M(v,w));
+    fixFactor=4.*(1.- M(v,w));
     M2 = M;
 
     for(count i=0;i<vecOfNodes.size();i++){
@@ -86,6 +86,45 @@ namespace NetworKit {
         M2(x,y)/=fixFactor;
         M2(x,y)=M(x,y)+M2(x,y);
         M2(y,x)=M2(x,y);
+      }
+    }
+    M=M2;
+  }
+  void EffectiveResistanceDistance::corollary(std::vector<node> vecOfNodes,node u, node v, node w,double edgeWeightOne,double edgeWeightTwo){
+    node x;
+    node y;
+    double A;
+    double B;
+    double C;
+    double D;
+    double E;
+    double F;
+    double N;
+    double FD;
+    double AmC;
+    arma::Mat<double> M2;
+
+    B=M(w,v)-M(v,u)+M(w,u);
+    D=4.*(edgeWeightOne+ M(w,v));
+    E=4.*(edgeWeightTwo-M(w,u));
+    N=D*(D*E+4*B*B);
+    M2 = M;
+
+    for(count i=0;i<vecOfNodes.size();i++){
+      x=vecOfNodes[i];
+      A=M(x,v)-M(x,w);
+      F=M(x,u)-M(x,w);
+      FD=F*D;
+      for(count j=i+1;j<vecOfNodes.size();j++){
+        y=vecOfNodes[j];
+        C=M(u,y)-M(w,y);
+        F-=M(u,y)-M(w,y);
+        AmC=(A-C);
+        M2(x,y)=FD-2*(AmC)*B;
+        M2(x,y)*=M2(x,y);
+        M2(x,y)/=N;
+        M2(x,y)-=AmC*AmC/D;
+        M2(y,x)=M(x,y)+M2(x,y);
       }
     }
     M=M2;
