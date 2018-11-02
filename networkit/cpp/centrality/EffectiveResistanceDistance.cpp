@@ -114,13 +114,13 @@ namespace NetworKit {
       x=vecOfNodes[i];
       A=M(x,v)-M(x,w);
       F=M(x,u)-M(x,w);
-      FD=F*D;
       for(count j=i+1;j<vecOfNodes.size();j++){
         y=vecOfNodes[j];
-        C=M(u,y)-M(w,y);
+        C=M(v,y)-M(w,y);
         F-=M(u,y)-M(w,y);
-        AmC=(A-C);
-        M2(x,y)=FD-2*(AmC)*B;
+        FD=F*D;
+        AmC=A-C;
+        M2(x,y)=FD+2*(AmC)*B;
         M2(x,y)*=M2(x,y);
         M2(x,y)/=N;
         M2(x,y)-=AmC*AmC/D;

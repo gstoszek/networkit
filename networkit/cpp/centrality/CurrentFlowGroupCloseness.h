@@ -67,9 +67,7 @@ namespace NetworKit {
         arma::Mat<double> L;
 
         void greedy(count n_peripheral_merges);
-        std::vector<std::vector<node>> updateAdj(count minDegree);
         count updateMinDegree(count minDegree);
-        std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
         std::vector<std::pair<count,count>> peripheralCoarsingIndices();
         std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);

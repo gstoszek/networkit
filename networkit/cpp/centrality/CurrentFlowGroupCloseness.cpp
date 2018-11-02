@@ -32,12 +32,14 @@ namespace NetworKit {
      Adj.resize(n);
      L.set_size(n,n);
      L.zeros();
-
-     vecOfNodes=G.nodes();
+     std::vector<node> vecOfNodesMapping;
+     vecOfNodes.resize(n);
+     vecOfNodesMapping=G.nodes();
      ERD.M=L;
      for(count i=0;i<L.n_rows;i++){
+       vecOfNodes[i]=i;
        for(count j=i+1;j<L.n_rows;j++){
-         if(G.hasEdge(vecOfNodes[i],vecOfNodes[j])){
+         if(G.hasEdge(vecOfNodesMapping[i],vecOfNodesMapping[j])){
            L(i,j)=-1.;
            L(j,i)=-1.;
            L(i,i)+=1;
@@ -62,131 +64,103 @@ namespace NetworKit {
       if(CB>0){
           minDegree=1;
           ID++;
-          c_indices.resize(0);
-          minDegree=updateMinDegree(minDegree);
           c_indices=peripheralCoarsingIndices();
           coarseLaplacian(c_indices,ID);
           minDegree=updateMinDegree(1);
-          while((minDegree==1)&&(CB>1)&&(vecOfNodes.size()>k)){
-            ID++;
-            c_indices=peripheralCoarsingIndices();
-            coarseLaplacian(c_indices,ID);
-            minDegree=updateMinDegree(1);
-          }
-          while((minDegree<CB)&&(vecOfNodes.size()>k)){
-            ID++;
-            c_indices=coarsingIndices(minDegree, false);
-            coarseLaplacian(c_indices,ID);
-            minDegree=updateMinDegree(1);
+          if(CB>1){
+            while((minDegree<CB)&&(vecOfNodes.size()>k)){
+              ID++;
+              if(minDegree==1){
+                c_indices=peripheralCoarsingIndices();
+              }
+              else{
+                c_indices=coarsingIndices(minDegree, false);
+              }
+              coarseLaplacian(c_indices,ID);
+              minDegree=updateMinDegree(1);
           }
         }
-        L=arma::pinv(L,0.01);
-        ERD.computeFromPinvL(L,vecOfNodes);
-        end = std::chrono::high_resolution_clock::now();
-        diff = end-start;
-        std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
-        if(CB>1){
-          ID=LevelList[LevelList.size()-1].getID();
-          while(ID>1){
-            uncoarseEfffectiveResistanceDistanceMatrix(ID);
-            ID--;
-          }
-          nPeripheralMerges=mergePeripheralNodes();
+      }
+      L=arma::pinv(L,0.01);
+      ERD.computeFromPinvL(L,vecOfNodes);
+      end = std::chrono::high_resolution_clock::now();
+      diff = end-start;
+      std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
+      if(CB>1){
+        ID=LevelList[LevelList.size()-1].getID();
+        while(ID>1){
+          uncoarseEfffectiveResistanceDistanceMatrix(ID);
+          ID--;
         }
-        greedy(nPeripheralMerges);
+        nPeripheralMerges=mergePeripheralNodes();
       }
-      std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
-        return S;
-      }
-      double CurrentFlowGroupCloseness::getCFGCC() {
-        return CFGCC;
-      }
-      void CurrentFlowGroupCloseness::greedy(count nPeripheralMerges){
-        count sampleSize;
-        node v;
-        node w;
-        node s;
-        double centrality;
-        std::vector<bool> V;
-        std::vector<double> mindst;
-        std::vector<double> dst;
-        std::vector<double> bst;
-        std::vector<double> zeroVec;
-        std::vector<node> vecOfSamples;
-
-        vecOfSamples = vecOfNodes;
-        vecOfSamples.erase(vecOfSamples.end()-nPeripheralMerges, vecOfSamples.end());
-        sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
-
-        if(sampleSize>vecOfSamples.size()){sampleSize=vecOfSamples.size();}
-
-        CFGCC=ERD.M.max()*n;
-        V.resize(G.numberOfNodes(),true);
-        mindst.resize(G.numberOfNodes(),ERD.M.max());
-        zeroVec.resize(G.numberOfNodes(),0.);
-
-        for(count i=0;i<k;i++){
-          for (count j=0; j<vecOfSamples.size();j++) {
-            if(V[vecOfNodes[j]]){
-              std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
-              v=vecOfNodes[j];
-              dst=mindst;
-              centrality = 0.;
-              for (count l = 0; l < sampleSize; l++) {
-                w=vecOfNodes[l];
-                if (ERD.M(v,w)< mindst[w])
-                  dst[w]=ERD.M(v,w);
-                centrality +=dst[w];
-              }
-              centrality*=((double)(vecOfSamples.size())/(double)(sampleSize));
-              for (count l = 0 ; l < nPeripheralMerges; l++) {
-                w=vecOfNodes[vecOfNodes.size()-nPeripheralMerges+l];
-                if (ERD.M(v,w)< mindst[w])
-                  dst[w]=ERD.M(v,w);
-                centrality += dst[w];
-              }
-              if (centrality < CFGCC) {
-                CFGCC = centrality;
-                bst=dst;
-                s = v;
-              }
-            }
-          }
-          S[i]=s;
-          V[s]=false;
-          mindst=bst;
-        }
-        CFGCC = (double)(n)/CFGCC;
-      }
-
-    std::vector<std::vector<node>> CurrentFlowGroupCloseness::updateAdj(count minDegree){
-      bool search;
-      count j;
-
+      greedy(nPeripheralMerges);
+    }
+    std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
+      return S;
+    }
+    double CurrentFlowGroupCloseness::getCFGCC() {
+      return CFGCC;
+    }
+    void CurrentFlowGroupCloseness::greedy(count nPeripheralMerges){
+      count sampleSize;
       node v;
       node w;
-      std::vector<std::vector<node>> update_List;
-      update_List.resize(G.numberOfNodes());
-      for(count i=0;i<vecOfNodes.size();i++){
-        v=vecOfNodes[i];
-        if(L(i,i)==minDegree){
-          search=true;
-          j=0;
-          while((j<vecOfNodes.size())&&(search)){
-            if((L(i,j)!=0) && (i!=j)){
-              w=vecOfNodes[j];
-              update_List[v].push_back(w);
-              if(update_List[v].size()==minDegree){
-                search=false;
+      node s;
+      double centrality;
+      std::vector<bool> V;
+      std::vector<double> mindst;
+      std::vector<double> dst;
+      std::vector<double> bst;
+      std::vector<double> zeroVec;
+      std::vector<node> vecOfSamples;
+
+      vecOfSamples = vecOfNodes;
+      vecOfSamples.erase(vecOfSamples.end()-nPeripheralMerges, vecOfSamples.end());
+      sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
+
+      if(sampleSize>vecOfSamples.size()){sampleSize=vecOfSamples.size();}
+
+      CFGCC=ERD.M.max()*n;
+      V.resize(G.numberOfNodes(),true);
+      mindst.resize(G.numberOfNodes(),ERD.M.max());
+      zeroVec.resize(G.numberOfNodes(),0.);
+
+      for(count i=0;i<k;i++){
+        for (count j=0; j<vecOfSamples.size();j++) {
+          if(V[vecOfNodes[j]]){
+            std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
+            v=vecOfNodes[j];
+            dst=mindst;
+            centrality = 0.;
+            for (count l = 0; l < sampleSize; l++) {
+              w=vecOfNodes[l];
+              if (ERD.M(v,w)< mindst[w]){
+                dst[w]=ERD.M(v,w);
               }
+              centrality +=dst[w];
             }
-            j++;
+            centrality*=((double)(vecOfSamples.size())/(double)(sampleSize));
+            for (count l = 0 ; l < nPeripheralMerges; l++) {
+              w=vecOfNodes[vecOfNodes.size()-nPeripheralMerges+l];
+              if (ERD.M(v,w)< mindst[w]){
+                dst[w]=ERD.M(v,w);
+              }
+              centrality += dst[w];
+            }
+            if (centrality < CFGCC) {
+              CFGCC = centrality;
+              bst=dst;
+              s = v;
+            }
           }
         }
+        S[i]=s;
+        V[s]=false;
+        mindst=bst;
       }
-      return update_List;
+     CFGCC = (double)(n)/CFGCC;
     }
-    /***************************************************************************/
     count CurrentFlowGroupCloseness::updateMinDegree(count minDegree){
       bool search;
       count min;
@@ -210,17 +184,6 @@ namespace NetworKit {
       }
       return min;
     }
-    /***************************************************************************/
-    std::vector<std::pair<node,node>> CurrentFlowGroupCloseness::updateMatching(std::vector<std::pair<count,count>> indices){
-      std::vector<std::pair<node,node>> Matching;
-      Matching.resize(indices.size());
-        for(count i=0;i<Matching.size();i++){
-          Matching[i].first=vecOfNodes[indices[i].first];
-          Matching[i].second=vecOfNodes[indices[i].second];
-        }
-      return Matching;
-    }
-    /***************************************************************************/
     std::vector<std::pair<count,count>> CurrentFlowGroupCloseness::peripheralCoarsingIndices(){
       count s_i;
       node c;
@@ -232,11 +195,11 @@ namespace NetworKit {
         reverse[vecOfNodes[i]]=i;
       }
       indices.resize(0);
-      for(count i=0;i<L.n_rows;i++){
-        if(L(i,i)==1){
-          c=vecOfNodes[i];
+      for(count c_i=0;c_i<L.n_rows;c_i++){
+        if(L(c_i,c_i)==1){
+          c=vecOfNodes[c_i];
           s_i=reverse[Adj[c][0]];
-          indices.push_back(std::make_pair(i,s_i));
+          indices.push_back(std::make_pair(c_i,s_i));
         }
       }
       return indices;
@@ -296,27 +259,31 @@ namespace NetworKit {
     void CurrentFlowGroupCloseness::uncoarseEfffectiveResistanceDistanceMatrix(count ID){
       bool search;
       count l;
+      count j;
       node u;
       node v;
       node w;
       std::vector<std::tuple<node,node,count>> vecOfTransferredEdges;
       vecOfTransferredEdges=LevelList[ID-1].getVecOfTransferredEdges();
       for(count i=0;i<vecOfTransferredEdges.size();i++){
-        if(std::get<2>(vecOfTransferredEdges[i]) == 1){
-          u=std::get<1>(vecOfTransferredEdges[i]);
-          v=std::get<0>(vecOfTransferredEdges[i]);
+        j=vecOfTransferredEdges.size()-1-i;
+        if(std::get<2>(vecOfTransferredEdges[j]) == 1){
+          u=std::get<1>(vecOfTransferredEdges[j]);
+          v=std::get<0>(vecOfTransferredEdges[j]);
           ERD.firstJoin(vecOfNodes,u,v,1.);
           vecOfNodes.push_back (v);
           Adj[v].push_back (u);
         }
-        else if(std::get<2>(vecOfTransferredEdges[i])== 2){
-          w=std::get<1>(vecOfTransferredEdges[i]);
+        else if(std::get<2>(vecOfTransferredEdges[j])== 2){
+          w=std::get<1>(vecOfTransferredEdges[j]);
           ERD.edgeFire(vecOfNodes,v,w,1.);
           Adj[v].push_back (w);
         }
-        else if(std::get<2>(vecOfTransferredEdges[i])== 3){
-          w=std::get<1>(vecOfTransferredEdges[i]);
-          ERD.corollary(vecOfNodes,u,v,w,1.,1.);
+        else if(std::get<2>(vecOfTransferredEdges[j])== 3){
+          w=std::get<1>(vecOfTransferredEdges[j]);
+          ERD.edgeFire(vecOfNodes,v,w,1.);
+          ERD.nonBridgeDelete(vecOfNodes,u,w,1.);
+          //ERD.corollary(vecOfNodes,u,v,w,1.,1.);
           Adj[v].push_back (w);
           search = true;
           l= 0;
@@ -388,7 +355,6 @@ namespace NetworKit {
         s=vecOfNodes[s_i];
         L(s_i,s_i)-=1;
         reverseBool[c]=false;
-        vecOfTransferredEdges.push_back(std::make_tuple(c,s,1));
         search = true;
         l= 0;
         while((l<Adj[s].size())&&(search)){
@@ -433,6 +399,7 @@ namespace NetworKit {
             }//end else
           }//end if
         }//end for
+        vecOfTransferredEdges.push_back(std::make_tuple(c,s,1));
         Adj[c].resize(0);
       }
       arma::uvec indices(vecOfNodes.size()-matchings.size());
