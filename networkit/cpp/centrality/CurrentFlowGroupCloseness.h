@@ -59,7 +59,7 @@ namespace NetworKit {
         std::vector<node> S;
 
         std::vector<node> vecOfNodes;
-        std::vector<std::vector<node>> TopMatch;
+        std::vector<std::vector<node>> Adj;
         std::vector<ERDLevel> LevelList;
 
         EffectiveResistanceDistance ERD;
@@ -67,14 +67,14 @@ namespace NetworKit {
         arma::Mat<double> L;
 
         void greedy(count n_peripheral_merges);
-        std::vector<std::vector<node>> updateTopMatch(count minDegree);
+        std::vector<std::vector<node>> updateAdj(count minDegree);
         count updateMinDegree(count minDegree);
         std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
         std::vector<std::pair<count,count>> peripheralCoarsingIndices();
         std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
-        void uncoarseEfffectiveResistanceDistanceMatrix(node s,node v,count ID);
+        void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
         count mergePeripheralNodes();
-        void coarseLaplacian(std::vector<std::pair<count,count>> indices);
+        void coarseLaplacian(std::vector<std::pair<count,count>> matchings,count ID);
 
 
     };

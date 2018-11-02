@@ -18,29 +18,24 @@ namespace NetworKit {
     {
     public:
 
-        ERDLevel(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> Adj);
+        ERDLevel(count ID, std::vector<node> vecOfNodes,std::vector<std::tuple<node,node,count>> vecOfTransferredEdges);
 
-        void set(count ID, std::vector<node> vList,std::vector<std::pair<node,node>> Matching,std::vector<std::vector<node>> Adj);
-        void set_ID(count ID);
-        void set_vList(std::vector<node> vList);
-        void set_Matching(std::vector<std::pair<node,node>> Matching);
-        void set_TopMatch(std::vector<std::vector<node>> Adj);
+        void set(count ID, std::vector<node> vecOfNodes,std::vector<std::tuple<node,node,count>> vecOfTransferredEdges);
+        void setID(count ID);
+        void setVecOfNodes(std::vector<node> vecOfNodes);
+        void setVecOfTransferredEdges(std::vector<std::tuple<node,node,count>> vecOfTransferredEdges);
 
-        void print();
-        count get_ID();
-        std::vector<count> get_vList();
-        std::vector<std::pair<node,node>> get_Matching();
-        std::vector<std::vector<node>> get_TopMatch();
-        std::vector<node> getVecOfAdj(node v);
+        count getID();
+        std::vector<count> getVecOfNodes();
+        std::vector<std::tuple<node,node,count>> getVecOfTransferredEdges();
 
         ~ERDLevel() {};
 
     private:
 
         count LevelID;
-        std::vector<node> LevelvList;
-        std::vector<std::pair<node,node>> LevelMatching;
-        std::vector<std::vector<node>> LevelAdj;
+        std::vector<node> LevelVecOfNodes;
+        std::vector<std::tuple<node,node,count>> LevelVecOfTransferredEdges;
     };
 
 
