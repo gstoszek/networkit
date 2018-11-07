@@ -21,15 +21,16 @@ namespace NetworKit {
     M.zeros();
   };
 
-  void EffectiveResistanceDistance::computeFromPinvL(arma::Mat<double> PinvLaplacian,std::vector<node> vecOfNodes){
+  void EffectiveResistanceDistance::computeFromLaplacian(std::vector<node> vecOfNodes,arma::Mat<double> Laplacian){
     node v;
     node w;
+    Laplacian=arma::pinv(Laplacian);
     /*calculate initial M Matrix*/
     for(count i=0;i<vecOfNodes.size();i++){
       v=vecOfNodes[i];
       for(count j=i+1;j<vecOfNodes.size();j++){
         w=vecOfNodes[j];
-        M(v,w)=PinvLaplacian(i,i)+PinvLaplacian(j,j)-2.*PinvLaplacian(i,j);
+        M(v,w)=Laplacian(i,i)+Laplacian(j,j)-2.*Laplacian(i,j);
         M(w,v)=M(v,w);
       }
     }
@@ -38,8 +39,8 @@ namespace NetworKit {
     node u;
     for(count i=0;i<vecOfNodes.size();i++){
       u=vecOfNodes[i];
-      M(u,w)=M(u,v)+edgeWeight;
-      M(w,u)=M(u,w);
+      M(u,v)=M(u,w)+edgeWeight;
+      M(v,u)=M(u,v);
     }
   }
   void EffectiveResistanceDistance::edgeFire(std::vector<node> vecOfNodes,node v, node w,double edgeWeight){
@@ -48,7 +49,7 @@ namespace NetworKit {
     double fixFactor;
     arma::Mat<double> M2;
 
-    fixFactor=4.*(1.+M(v,w));
+    fixFactor=4.*(edgeWeight+M(v,w));
     M2 = M;
 
     for(count i=0;i<vecOfNodes.size();i++){
@@ -73,7 +74,7 @@ namespace NetworKit {
     double fixFactor;
     arma::Mat<double> M2;
 
-    fixFactor=4.*(1.- M(v,w));
+    fixFactor=4.*(edgeWeight- M(v,w));
     M2 = M;
 
     for(count i=0;i<vecOfNodes.size();i++){
@@ -120,7 +121,7 @@ namespace NetworKit {
         F-=M(u,y)-M(w,y);
         FD=F*D;
         AmC=A-C;
-        M2(x,y)=FD+2*(AmC)*B;
+        M2(x,y)=FD-2*(AmC)*B;
         M2(x,y)*=M2(x,y);
         M2(x,y)/=N;
         M2(x,y)-=AmC*AmC/D;
@@ -128,5 +129,37 @@ namespace NetworKit {
       }
     }
     M=M2;
+  }
+  void EffectiveResistanceDistance::uncoarseTriangle(std::vector<node> vecOfNodes,std::tuple<node,node,count,double,double,double> triangle){
+    node c,s,w;
+    double edgeWeightcs,edgeWeightcw,edgeWeightsw;
+    arma::Mat<double> L;
+    c=std::get<0>(triangle);
+    s=std::get<1>(triangle);
+    w=std::get<2>(triangle);
+    edgeWeightcs=std::get<3>(triangle);
+    edgeWeightcw=std::get<4>(triangle);
+    edgeWeightsw=std::get<5>(triangle);
+    edgeWeightsw-=1./(1./edgeWeightcs+1./edgeWeightcw);
+    firstJoin(vecOfNodes,c,s,1./edgeWeightcs);
+    L.set_size(3,3);
+    L.zeros();
+    //s--c--w
+    L(0,1)=-edgeWeightcs;
+    L(1,0)=L(0,1);
+    L(0,2)=-edgeWeightsw;
+    L(2,0)=L(0,2);
+    L(1,2)=-edgeWeightcw;
+    L(2,1)=L(1,2);
+    L(0,0)=edgeWeightcs+edgeWeightsw;
+    L(1,1)=edgeWeightcs+edgeWeightcw;
+    L(2,2)=edgeWeightcw+edgeWeightsw;
+
+    L=arma::pinv(L,0.01);
+
+    M(c,w)=L(1,1)+L(2,2)-2*L(1,2);
+    M(w,c)=M(c,w);
+    M(c,s)=L(0,0)+L(1,1)-2*L(0,1);
+    M(s,c)=M(c,s);
   }
 } /* namespace NetworKit*/

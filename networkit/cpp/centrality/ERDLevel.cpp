@@ -17,32 +17,24 @@
 
 namespace NetworKit {
 
-  ERDLevel::ERDLevel(count ID, std::vector<node> vecOfNodes,std::vector<std::tuple<node,node,count>> vecOfTransferredEdges){
+  ERDLevel::ERDLevel(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
     LevelID=ID;
-    LevelVecOfNodes=vecOfNodes;
-    LevelVecOfTransferredEdges=vecOfTransferredEdges;
+    LevelVecOfTriangles=vecOfTriangles;
   }
-  void ERDLevel::set(count ID, std::vector<node> vecOfNodes,std::vector<std::tuple<node,node,count>> vecOfTransferredEdges){
+  void ERDLevel::set(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
     LevelID=ID;
-    LevelVecOfNodes=vecOfNodes;
-    LevelVecOfTransferredEdges=vecOfTransferredEdges;
+    LevelVecOfTriangles=vecOfTriangles;
   }
   void ERDLevel::setID(count ID){
     LevelID=ID;
   }
-  void ERDLevel::setVecOfNodes(std::vector<node> vecOfNodes){
-    LevelVecOfNodes=vecOfNodes;
-  }
-  void ERDLevel::setVecOfTransferredEdges(std::vector<std::tuple<node,node,count>> vecOfTransferredEdges){
-    LevelVecOfTransferredEdges=vecOfTransferredEdges;
+  void ERDLevel::setVecOfTriangles(std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
+    LevelVecOfTriangles=vecOfTriangles;
   }
   count ERDLevel::getID(){
     return LevelID;
   }
-  std::vector<count> ERDLevel::getVecOfNodes(){
-    return LevelVecOfNodes;
-  }
-  std::vector<std::tuple<node,node,count>> ERDLevel::getVecOfTransferredEdges(){
-    return LevelVecOfTransferredEdges;
+  std::vector<std::tuple<node,node,node,double,double,double>> ERDLevel::getVecOfTriangles(){
+    return LevelVecOfTriangles;
   }
 } /* namespace NetworKit*/

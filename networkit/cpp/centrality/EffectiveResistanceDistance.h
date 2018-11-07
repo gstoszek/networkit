@@ -25,10 +25,10 @@ namespace NetworKit {
       /**
        *computes EffectiveResistanceDistanceMatrice
        *
-       *@param Moore Penrose Pseudo Inverse Laplacian, expect a Laplacian of smaller or equal size as EffectiveResistanceDistanceMatrice
+       *@param Laplacian, expect a Laplacian of smaller or equal size as EffectiveResistanceDistanceMatrice
        *@param vecOfNodes, expect a vector of nodes with equal size as Laplacian
        */
-      void computeFromPinvL(arma::Mat<double> PinvLaplacian,std::vector<node> vecOfNodes);
+      void computeFromLaplacian(std::vector<node> vecOfNodes,arma::Mat<double> Laplacian);
       /**
        *executes first join operation
        *
@@ -63,6 +63,12 @@ namespace NetworKit {
        *@param edgeWeightTwo, weight of edge [u,w]
        */
       void corollary(std::vector<node> vecOfNodes,node u, node v, node w,double edgeWeightOne,double edgeWeightTwo);
+      /**
+      *Executes uncoarsening of a inner innerTriangle;
+      *@param c,s,w triangle nodes,
+      *@param edgeWeightcs,edgeWeightcw,edgeWeightsw corresponding Weights.
+      **/
+      void uncoarseTriangle(std::vector<node> vecOfNodes,std::tuple<node,node,count,double,double,double> triangle);
       /**
        *EffectiveResistanceDistanceMatrice
        */

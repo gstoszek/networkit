@@ -53,11 +53,13 @@ namespace NetworKit {
         count k=2;
         count CB=2;
         count n;
-
+        count numberOfCoarsedNodes;
         double CFGCC;
         double epsilon;
-        std::vector<node> S;
 
+        std::vector<bool> vecOfPeripheralNodes;
+
+        std::vector<node> S;
         std::vector<node> vecOfNodes;
         std::vector<std::vector<node>> Adj;
         std::vector<ERDLevel> LevelList;
@@ -66,13 +68,12 @@ namespace NetworKit {
 
         arma::Mat<double> L;
 
-        void greedy(count n_peripheral_merges);
-        count updateMinDegree(count minDegree);
-        std::vector<std::pair<count,count>> peripheralCoarsingIndices();
-        std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
+        void greedy();
+        count updateMinDegree();
+        std::vector<std::tuple<count,count,count>> coarsingIndices(count cDegree,bool Random);
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
-        count mergePeripheralNodes();
-        void coarseLaplacian(std::vector<std::pair<count,count>> matchings,count ID);
+        void mergePeripheralNodes();
+        void coarseLaplacian(std::vector<std::tuple<count,count,count>> matchings,count ID);
 
 
     };
