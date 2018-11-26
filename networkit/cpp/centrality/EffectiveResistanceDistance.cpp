@@ -24,7 +24,15 @@ namespace NetworKit {
   void EffectiveResistanceDistance::computeFromLaplacian(std::vector<node> vecOfNodes,arma::Mat<double> Laplacian){
     node v;
     node w;
-    Laplacian=arma::pinv(Laplacian);
+    count n;
+    double factor;
+    n=Laplacian.n_rows;
+    arma::Mat<double> J(Laplacian.n_rows,Laplacian.n_rows);
+    factor=1./n;
+    J.fill(factor);
+    Laplacian= Laplacian+J;
+    Laplacian=arma::inv_sympd(Laplacian);
+    Laplacian= Laplacian-J;
     /*calculate initial M Matrix*/
     for(count i=0;i<vecOfNodes.size();i++){
       v=vecOfNodes[i];
@@ -131,7 +139,7 @@ namespace NetworKit {
     M=M2;
   }
   void EffectiveResistanceDistance::uncoarseTriangle(std::vector<node> vecOfNodes,std::tuple<node,node,count,double,double,double> triangle){
-    node c,s,w;
+    node c,s,u,w;
     double edgeWeightcs,edgeWeightcw,edgeWeightsw;
     arma::Mat<double> L;
     c=std::get<0>(triangle);
@@ -141,7 +149,6 @@ namespace NetworKit {
     edgeWeightcw=std::get<4>(triangle);
     edgeWeightsw=std::get<5>(triangle);
     edgeWeightsw-=1./(1./edgeWeightcs+1./edgeWeightcw);
-    firstJoin(vecOfNodes,c,s,1./edgeWeightcs);
     L.set_size(3,3);
     L.zeros();
     //s--c--w
@@ -155,11 +162,19 @@ namespace NetworKit {
     L(1,1)=edgeWeightcs+edgeWeightcw;
     L(2,2)=edgeWeightcw+edgeWeightsw;
 
-    L=arma::pinv(L,0.01);
+    L=arma::pinv(L);
 
     M(c,w)=L(1,1)+L(2,2)-2*L(1,2);
     M(w,c)=M(c,w);
     M(c,s)=L(0,0)+L(1,1)-2*L(0,1);
     M(s,c)=M(c,s);
+
+    for(count i=0;i<vecOfNodes.size();i++){
+      u=vecOfNodes[i];
+      if(!(u==s)&&!(u==w)){
+        M(u,c)=std::min(M(u,s)+M(s,c),M(u,w)+M(w,c));
+        M(c,u)=M(u,c);
+      }
+    }
   }
 } /* namespace NetworKit*/

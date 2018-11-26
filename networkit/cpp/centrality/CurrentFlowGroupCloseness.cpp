@@ -60,6 +60,7 @@ namespace NetworKit {
    }
 
    void CurrentFlowGroupCloseness::run() {
+     bool coarse;
      count ID;
      count minDegree;
      auto start = std::chrono::high_resolution_clock::now();
@@ -73,26 +74,30 @@ namespace NetworKit {
        mergePeripheralNodes();
        ID++;
        minDegree=updateMinDegree();
-       while((minDegree<CB)&&(vecOfNodes.size()>k)){
+       coarse=true;
+       while((minDegree<CB)&&(coarse)){
          c_indices=coarsingIndices(minDegree, false);
          coarseLaplacian(c_indices,ID);
          ID++;
          minDegree=updateMinDegree();
+         if(!(c_indices.size()>1)||!(vecOfNodes.size()>k)){
+           coarse=false;
+         }
         }
       }
       ERD.computeFromLaplacian(vecOfNodes,L);
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
-      greedy();
-      std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
+    //  greedy();
+      //std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
       if(CB>1){
         ID=LevelList[LevelList.size()-1].getID();
         std::cout<<"ID="<<ID<<"\n";
         while(ID>1){
           uncoarseEfffectiveResistanceDistanceMatrix(ID);
-          greedy();
-          std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
+          //greedy();
+          //std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
           ID--;
         }
       }
