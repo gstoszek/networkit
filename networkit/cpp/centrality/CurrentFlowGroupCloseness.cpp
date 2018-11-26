@@ -128,7 +128,7 @@ namespace NetworKit {
           vecOfSamples.push_back(v);
         }
       }
-      sampleSize=(count)(log(vecOfSamples.size())/(epsilon*epsilon));
+      sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
       if(sampleSize>vecOfSamples.size()){
         sampleSize=vecOfSamples.size();
       }
