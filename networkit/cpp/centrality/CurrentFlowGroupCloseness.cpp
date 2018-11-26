@@ -112,10 +112,10 @@ namespace NetworKit {
     void CurrentFlowGroupCloseness::greedy(){
       count sampleSize;
       node s,v,w;
-      double centrality;
+      double centrality,prevCFGCC,bestMarginalGain;
       std::vector<bool> V;
       std::vector<node> vecOfSamples, vecOfPeriphs;
-      std::vector<double> mindst, dst, bst, zeroVec;
+      std::vector<double> mindst, dst, bst, zeroVec, marginalGain;
 
       vecOfSamples.resize(0);
       vecOfPeriphs.resize(0);
@@ -128,19 +128,22 @@ namespace NetworKit {
           vecOfSamples.push_back(v);
         }
       }
-      sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
+      sampleSize=(count)(log(vecOfSamples.size())/(epsilon*epsilon));
       if(sampleSize>vecOfSamples.size()){
         sampleSize=vecOfSamples.size();
       }
       CFGCC=ERD.M.max()*n;
+      prevCFGCC=CFGCC;
       V.resize(G.numberOfNodes(),true);
       mindst.resize(G.numberOfNodes(),ERD.M.max());
       zeroVec.resize(G.numberOfNodes(),0.);
+      marginalGain.resize(G.numberOfNodes(),CFGCC);
       for(count i=0;i<k;i++){
         std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
+        bestMarginalGain=0.;
         for (count j=0; j<vecOfSamples.size();j++) {
-          if(V[vecOfSamples[j]]){
-            v=vecOfSamples[j];
+          v=vecOfSamples[j];
+          if(V[v] && (bestMarginalGain<marginalGain[v])){
             dst=mindst;
             centrality = 0.;
             for (count l = 0; l < sampleSize; l++) {
@@ -158,10 +161,12 @@ namespace NetworKit {
               }
               centrality += dst[w];
             }
+            marginalGain[v]=prevCFGCC-centrality;
             if (centrality < CFGCC) {
               CFGCC = centrality;
               bst=dst;
               s = v;
+              bestMarginalGain=marginalGain[v];
             }
             //std::cout<<"c("<<v<<")"<<centrality<<"\n";
           }
@@ -169,6 +174,7 @@ namespace NetworKit {
         S[i]=s;
         V[s]=false;
         mindst=bst;
+        prevCFGCC=CFGCC;
       }
      CFGCC = (double)(n)/CFGCC;
     }
