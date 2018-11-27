@@ -27,6 +27,10 @@ namespace NetworKit {
      if (cc.getPartition().numberOfSubsets() > 1) throw std::runtime_error("Graph has more then one component!");
      if(k>=G.numberOfNodes()) throw std::runtime_error("Size of Group greater then number of nodes!");
 
+     auto start = std::chrono::high_resolution_clock::now();
+     auto end = std::chrono::high_resolution_clock::now();
+     std::chrono::duration<double> diff;
+
      node v;
      node w;
      double edgeWeight;
@@ -40,7 +44,7 @@ namespace NetworKit {
      vecOfPeripheralNodes.resize(n,false);
      vecOfNodes.resize(n);
      vecOfNodesMapping=G.nodes();
-     ERD.M=L;
+     //ERD.M=L;
      for(count i=0;i<L.n_rows;i++){
        vecOfNodes[i]=i;
        v=vecOfNodesMapping[i];
@@ -57,6 +61,10 @@ namespace NetworKit {
          }
        }
      }
+     end = std::chrono::high_resolution_clock::now();
+     diff = end-start;
+     std::cout << "Constructor finished in " << diff.count() << "(s)" << "\n\n";
+           std::cout << "Laplacian" << L.n_rows << "\n";
    }
 
    void CurrentFlowGroupCloseness::run() {
@@ -85,12 +93,22 @@ namespace NetworKit {
          }
         }
       }
-      ERD.computeFromLaplacian(vecOfNodes,L);
+      end = std::chrono::high_resolution_clock::now();
+      diff = end-start;
+      std::cout << "Coarsening " << diff.count() << "(s)" << "\n\n";
+      std::cout << "Laplacian size after coarsening" << L.n_rows << "\n";
+      start = std::chrono::high_resolution_clock::now();
+      /*changed
+      //ERD.computeFromLaplacian(vecOfNodes,L);
+      */
+
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
-    //  greedy();
+      //greedy();
       //std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
+      start = std::chrono::high_resolution_clock::now();
+      /*
       if(CB>1){
         ID=LevelList[LevelList.size()-1].getID();
         std::cout<<"ID="<<ID<<"\n";
@@ -101,7 +119,15 @@ namespace NetworKit {
           ID--;
         }
       }
+      */
+      end = std::chrono::high_resolution_clock::now();
+      diff = end-start;
+      std::cout << "Uncoarsening in " << diff.count() << "(s)" << "\n\n";
+      start = std::chrono::high_resolution_clock::now();
       greedy();
+      end = std::chrono::high_resolution_clock::now();
+      diff = end-start;
+      std::cout << "Greedy in " << diff.count() << "(s)" << "\n\n";
     }
     std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
       return S;
@@ -112,13 +138,19 @@ namespace NetworKit {
     void CurrentFlowGroupCloseness::greedy(){
       count sampleSize;
       node s,v,w;
-      double centrality,prevCFGCC,bestMarginalGain;
+      double centrality,prevCFGCC,bestMarginalGain,distance;
       std::vector<bool> V;
       std::vector<node> vecOfSamples, vecOfPeriphs;
+      std::vector<count> reverse;
       std::vector<double> mindst, dst, bst, zeroVec, marginalGain;
 
       vecOfSamples.resize(0);
       vecOfPeriphs.resize(0);
+
+      reverse.resize(G.numberOfNodes());
+      for(count i=0;i<vecOfNodes.size();i++){
+        reverse[vecOfNodes[i]]=i;
+      }
 
       for(count i=0;i<vecOfNodes.size();i++){
         v=vecOfNodes[i];
@@ -132,10 +164,10 @@ namespace NetworKit {
       if(sampleSize>vecOfSamples.size()){
         sampleSize=vecOfSamples.size();
       }
-      CFGCC=ERD.M.max()*n;
+      CFGCC=n*n;
       prevCFGCC=CFGCC;
       V.resize(G.numberOfNodes(),true);
-      mindst.resize(G.numberOfNodes(),ERD.M.max());
+      mindst.resize(G.numberOfNodes(),n*n);
       zeroVec.resize(G.numberOfNodes(),0.);
       marginalGain.resize(G.numberOfNodes(),CFGCC);
       for(count i=0;i<k;i++){
@@ -148,16 +180,18 @@ namespace NetworKit {
             centrality = 0.;
             for (count l = 0; l < sampleSize; l++) {
               w=vecOfSamples[l];
-              if (ERD.M(v,w)< mindst[w]){
-                dst[w]=ERD.M(v,w);
+              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[v],reverse[w]);
+              if (distance< mindst[w]){
+                dst[w]=distance;
               }
               centrality +=dst[w];
             }
             centrality*=((double)(vecOfSamples.size()+numberOfCoarsedNodes)/(double)(sampleSize));
             for (count l = 0 ; l < vecOfPeriphs.size(); l++) {
               w=vecOfPeriphs[l];
-              if (ERD.M(v,w)< mindst[w]){
-                dst[w]=ERD.M(v,w);
+              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[w],reverse[w]);
+              if (distance< mindst[w]){
+                dst[w]=distance;
               }
               centrality += dst[w];
             }
@@ -270,7 +304,9 @@ namespace NetworKit {
       for(count i=0;i<vecOfTriangles.size();i++){
         j=vecOfTriangles.size()-1-i;
         triangle=vecOfTriangles[j];
+        /**
         ERD.uncoarseTriangle(vecOfNodes,triangle);
+        **/
         c=std::get<0>(triangle);
         s=std::get<1>(triangle);
         w=std::get<2>(triangle);
@@ -473,5 +509,19 @@ namespace NetworKit {
       L=L.submat(indices, indices);
       ERDLevel Level(ID,vecOfTriangles);
       LevelList.push_back(Level);
+    }
+
+    void CurrentFlowGroupCloseness::computePinvOfLaplacian(){
+      node v;
+      node w;
+      count n;
+      double factor;
+      n=L.n_rows;
+      arma::Mat<double> J(n,n);
+      factor=1./n;
+      J.fill(factor);
+      L= L+J;
+      L=arma::inv_sympd(L);
+      L= L-J;
     }
 } /* namespace NetworKit*/

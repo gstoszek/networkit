@@ -64,7 +64,7 @@ namespace NetworKit {
         std::vector<std::vector<node>> Adj;
         std::vector<ERDLevel> LevelList;
 
-        EffectiveResistanceDistance ERD;
+        //EffectiveResistanceDistance ERD;
 
         arma::Mat<double> L;
 
@@ -74,7 +74,7 @@ namespace NetworKit {
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
         void mergePeripheralNodes();
         void coarseLaplacian(std::vector<std::tuple<count,count,count>> matchings,count ID);
-
+        void computePinvOfLaplacian();
 
     };
 
