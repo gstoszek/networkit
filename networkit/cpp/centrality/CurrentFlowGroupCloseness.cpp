@@ -101,7 +101,7 @@ namespace NetworKit {
       /*changed
       //ERD.computeFromLaplacian(vecOfNodes,L);
       */
-
+      computePinvOfLaplacian();
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
@@ -164,7 +164,7 @@ namespace NetworKit {
       if(sampleSize>vecOfSamples.size()){
         sampleSize=vecOfSamples.size();
       }
-      CFGCC=n*n;
+      CFGCC=n*n*n;
       prevCFGCC=CFGCC;
       V.resize(G.numberOfNodes(),true);
       mindst.resize(G.numberOfNodes(),n*n);
@@ -189,7 +189,7 @@ namespace NetworKit {
             centrality*=((double)(vecOfSamples.size()+numberOfCoarsedNodes)/(double)(sampleSize));
             for (count l = 0 ; l < vecOfPeriphs.size(); l++) {
               w=vecOfPeriphs[l];
-              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[w],reverse[w]);
+              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[v],reverse[w]);
               if (distance< mindst[w]){
                 dst[w]=distance;
               }
