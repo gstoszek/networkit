@@ -20,7 +20,7 @@ namespace NetworKit {
     /*
      *
      */
-    class CurrentFlowGroupCloseness: public NetworKit::Centrality {
+    class CurrentFlowGroupCloseness: public NetworKit::Algorithm {
 
     public:
         /**
@@ -50,6 +50,8 @@ namespace NetworKit {
 
     private:
 
+        Graph& G;
+
         count k=2;
         count CB=2;
         count n;
@@ -58,7 +60,6 @@ namespace NetworKit {
         double epsilon;
 
         std::vector<bool> vecOfPeripheralNodes;
-
         std::vector<node> S;
         std::vector<ERDLevel> LevelList;
         //EffectiveResistanceDistance ERD;
@@ -69,6 +70,8 @@ namespace NetworKit {
         void mergePeripheralNodes();
         void coarseGraph(std::vector<std::tuple<count,count,count>> matchings,count ID);
         arma::Mat<double> computePinvOfLaplacian();
+
+
 
     };
 

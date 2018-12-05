@@ -20,7 +20,7 @@
 
 namespace NetworKit {
 
-   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon) : Centrality(G, true),k(k),CB(CB),epsilon(epsilon){
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon) : G(G),k(k),CB(CB),epsilon(epsilon){
      if (G.isDirected()) throw std::runtime_error("Graph is directed graphs!");
      ConnectedComponents cc(G);
      cc.run();
