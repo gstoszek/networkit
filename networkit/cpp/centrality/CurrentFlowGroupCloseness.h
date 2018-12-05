@@ -12,7 +12,9 @@
 #include "../numerics/LAMG/Lamg.h"
 #include "EffectiveResistanceDistance.h"
 #include "ERDLevel.h"
+#include "../components/ConnectedComponents.h"
 #include <armadillo>
+#include <algorithm>
 
 namespace NetworKit {
     /*
@@ -26,9 +28,8 @@ namespace NetworKit {
          * @param G An connected unweighted graph.
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
-         * @
          */
-        CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2);
+        CurrentFlowGroupCloseness(Graph G,const count k = 2,const count CB = 2,const double epsilon=0.1);
         /**
          * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
          */
@@ -52,31 +53,22 @@ namespace NetworKit {
         count k=2;
         count CB=2;
         count n;
-
+        count numberOfCoarsedNodes;
         double CFGCC;
+        double epsilon;
+
+        std::vector<bool> vecOfPeripheralNodes;
+
         std::vector<node> S;
-
-        std::vector<node> vList;
-        std::vector<std::vector<node>> TopMatch;
         std::vector<ERDLevel> LevelList;
-
-        EffectiveResistanceDistance ERD;
-
-        arma::Mat<double> L;
-        arma::Mat<double> Adj;
-
-        void cleanNetwork();
-        void greedy(count n_peripheral_merges);
-        void computeInitialERD(count upperDegreeBound);
-        std::vector<std::vector<node>> updateTopMatch(count minDegree);
-        count updateMinDegree(count minDegree);
-        std::vector<std::pair<node,node>> updateMatching(std::vector<std::pair<count,count>> indices);
-        std::vector<std::pair<count,count>> peripheralCoarsingIndices();
-        std::vector<std::pair<count,count>> coarsingIndices(count cDegree,bool Random);
-        void uncoarse(node s,node v,count ID);
-        count mergePeripheralNodes();
-        void coarseLaplacian(std::vector<std::pair<count,count>> indices);
-
+        //EffectiveResistanceDistance ERD;
+        void greedy(arma::Mat<double> L);
+        count updateMinDegree();
+        std::vector<std::tuple<count,count,count>> coarsingIndices(count cDegree,bool Random);
+        void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
+        void mergePeripheralNodes();
+        void coarseGraph(std::vector<std::tuple<count,count,count>> matchings,count ID);
+        arma::Mat<double> computePinvOfLaplacian();
 
     };
 
