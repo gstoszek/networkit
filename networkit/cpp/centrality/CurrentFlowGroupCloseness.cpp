@@ -3,7 +3,7 @@
  *
  *      Author: gstoszek
  */
-
+#define ARMA_DONT_PRINT_ERRORS
 #include "CurrentFlowGroupCloseness.h"
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
@@ -20,8 +20,8 @@
 
 namespace NetworKit {
 
-   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph G,const count k, const count CB,const double epsilon) : Centrality(G, true),k(k),CB(CB),epsilon(epsilon){
-     if (G.isDirected()) throw std::runtime_error("Graph is directed graphs!");
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon) : G(G),k(k),CB(CB),epsilon(epsilon){
+     if (G.isDirected()) throw std::runtime_error("Graph is directed!");
      ConnectedComponents cc(G);
      cc.run();
      if (cc.getPartition().numberOfSubsets() > 1) throw std::runtime_error("Graph has more then one component!");
@@ -31,25 +31,24 @@ namespace NetworKit {
      auto end = std::chrono::high_resolution_clock::now();
      std::chrono::duration<double> diff;
 
-     numberOfCoarsedNodes=0;
      S.resize(k);
      n=G.numberOfNodes();
 
      end = std::chrono::high_resolution_clock::now();
      diff = end-start;
-     std::cout << "Constructor finished in " << diff.count() << "(s)" << "\n\n";
-           std::cout << "Number of Nodes=" << G.numberOfNodes() << "\n";
+     std::cout << "Constructor finished in " << diff.count() << "(s)" << "\n";
+     std::cout << "Number of Nodes=" << G.numberOfNodes() << "\n";
    }
 
    void CurrentFlowGroupCloseness::run() {
      bool coarse;
-     count ID;
-     count minDegree;
+     count ID, minDegree;
      auto start = std::chrono::high_resolution_clock::now();
      auto end = std::chrono::high_resolution_clock::now();
      std::chrono::duration<double> diff;
-     std::vector<std::tuple<count,count,count>> c_indices;
-     arma::Mat<double> L;
+     std::vector<node> vecOfChosenNodes;
+     arma::Mat<double> Pinv;
+
      ID=0;
      if(CB>0){
        ID++;
@@ -59,28 +58,25 @@ namespace NetworKit {
        minDegree=updateMinDegree();
        coarse=true;
        while((minDegree<CB)&&(coarse)){
-         c_indices=coarsingIndices(minDegree, false);
-         coarseGraph(c_indices,ID);
+         vecOfChosenNodes=coarsingIndices(minDegree, false);
+         coarseGraph(vecOfChosenNodes,ID);
          ID++;
          minDegree=updateMinDegree();
-
-         if(!(c_indices.size()>1)||!(G.numberOfNodes()>k)){
+         if(!(vecOfChosenNodes.size()>1)||!(G.numberOfNodes()>k)){
            coarse=false;
          }
         }
       }
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
-      std::cout << "Coarsening " << diff.count() << "(s)" << "\n\n";
-      std::cout << "Laplacian size afvoidter coarsening" << L.n_rows << "\n";
+      std::cout << "Coarsening of G finished in: " << diff.count() << "(s)" << "\n";
+      std::cout << "Number of nodes after coarsening: " << G.numberOfNodes() << "\n";
       start = std::chrono::high_resolution_clock::now();
-      /*changed
-      //ERD.computeFromLaplacian(vecOfNodes,L);
-      */
-      L=computePinvOfLaplacian();
+
+      Pinv=computePinvOfLaplacian();
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
-      std::cout << "Initial EffectiveResistanceDistanceMatrix finished in " << diff.count() << "(s)" << "\n\n";
+      std::cout << "Construction of Pinv(L) in: " << diff.count() << "(s)" << "\n";
       //greedy();
       //std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
       start = std::chrono::high_resolution_clock::now();
@@ -98,12 +94,12 @@ namespace NetworKit {
       */
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
-      std::cout << "Uncoarsening in " << diff.count() << "(s)" << "\n\n";
+      std::cout << "Uncoarsening in: " << diff.count() << "(s)" << "\n";
       start = std::chrono::high_resolution_clock::now();
-      greedy(L);
+      greedy(Pinv);
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
-      std::cout << "Greedy in " << diff.count() << "(s)" << "\n\n";
+      std::cout << "Greedy in: " << diff.count() << "(s)" << "\n\n";
     }
     std::vector<node> CurrentFlowGroupCloseness::getNodesofGroup(){
       return S;
@@ -112,14 +108,13 @@ namespace NetworKit {
       return CFGCC;
     }
     void CurrentFlowGroupCloseness::greedy(arma::Mat<double> L){
-      count sampleSize;
+      count sampleSize,v_i,w_i;
       node s,v,w;
       double centrality,prevCFGCC,bestMarginalGain,distance;
       std::vector<bool> V;
-      std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs;
+      std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs,cutNodes;
       std::vector<count> reverse;
-      std::vector<double> mindst, dst, bst, zeroVec, marginalGain;
-
+      std::vector<double> mindst, dst, bst, minApprox, bstApprox, marginalGain;
       vecOfSamples.resize(0);
       vecOfPeriphs.resize(0);
       vecOfNodes = G.nodes();
@@ -130,55 +125,66 @@ namespace NetworKit {
 
       for(count i=0;i<vecOfNodes.size();i++){
         v=vecOfNodes[i];
-        if(vecOfPeripheralNodes[v])
-          vecOfPeriphs.push_back(v);
-        else{
+        if(std::find(vecOfPeripheralNodes.begin(), vecOfPeripheralNodes.end(), v) != vecOfPeripheralNodes.end())
           vecOfSamples.push_back(v);
+        else{
+          vecOfPeriphs.push_back(v);
         }
       }
+      /*
       sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
       if(sampleSize>vecOfSamples.size()){
         sampleSize=vecOfSamples.size();
       }
+      */
       CFGCC=n*n*n;
       prevCFGCC=CFGCC;
       V.resize(G.numberOfNodes(),true);
       mindst.resize(G.numberOfNodes(),n*n);
-      zeroVec.resize(G.numberOfNodes(),0.);
       marginalGain.resize(G.numberOfNodes(),CFGCC);
       for(count i=0;i<k;i++){
         std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
         bestMarginalGain=0.;
         for (count j=0; j<vecOfSamples.size();j++) {
           v=vecOfSamples[j];
-          if(V[v] && (bestMarginalGain<marginalGain[v])){
+          v_i=reverse[v];
+          if(V[v_i] && (bestMarginalGain<marginalGain[v_i])){
             dst=mindst;
             centrality = 0.;
+            cutNodes.resize(0);
             for (count l = 0; l < sampleSize; l++) {
               w=vecOfSamples[l];
-              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[v],reverse[w]);
-              if (distance< mindst[w]){
-                dst[w]=distance;
+              w_i=reverse[w];
+              if(W[w_i]){
+                distance=L(v_i,v_i)+L(w_i,w_i)-2*L(v_i,w_i);
+                if (distance< mindst[w_i]){
+                  dst[w_i]=distance;
+                  if(distance<bst[w_i])
+                    cutNodes.push_back(w_i);
+                }
               }
-              centrality +=dst[w];
+              centrality +=dst[w_i];
             }
-            centrality*=((double)(vecOfSamples.size()+numberOfCoarsedNodes)/(double)(sampleSize));
             for (count l = 0 ; l < vecOfPeriphs.size(); l++) {
               w=vecOfPeriphs[l];
-              distance=L(reverse[v],reverse[v])+L(reverse[w],reverse[w])-2*L(reverse[v],reverse[w]);
-              if (distance< mindst[w]){
-                dst[w]=distance;
+              w_i=reverse[w];
+              if(W[w_i]){
+                distance=L(v_i,v_i)+L(w_i,w_i)-2*L(v_i,w_i);
+                if (distance< mindst[w_i]){
+                  dst[w_i]=distance;
+                  if(distance<bst[w_i])
+                    cutNodes.push_back(w_i);
+                }
+                centrality += dst[w_i];
               }
-              centrality += dst[w];
             }
-            marginalGain[v]=prevCFGCC-centrality;
+            marginalGain[v_i]=prevCFGCC-centrality;
             if (centrality < CFGCC) {
               CFGCC = centrality;
               bst=dst;
               s = v;
-              bestMarginalGain=marginalGain[v];
+              bestMarginalGain=marginalGain[v_i];
             }
-            //std::cout<<"c("<<v<<")"<<centrality<<"\n";
           }
         }
         S[i]=s;
@@ -210,58 +216,49 @@ namespace NetworKit {
       }
       return min;
     }
-    std::vector<std::tuple<count,count,count>> CurrentFlowGroupCloseness::coarsingIndices(count courseningDegree, bool Random){
+    std::vector<node> CurrentFlowGroupCloseness::coarsingIndices(count courseningDegree, bool Random){
         bool search;
-        count c_i,s_i,w_i,l;
-        node c,s,w;
-        std::vector<bool> vecOfFreeNodes;
-        std::vector<node> vecOfNodes, vecOfCoarseNodes, vecOfNeighbours;
-        std::vector<std::tuple<count,count,count>> indices;
+        count l;
+        node c,w;
+        std::vector<node> vecOfNodes, vecOfChosenNodes, vecOfNeighbors,vecOfOccupiedNodes,vecOfCandidates;
 
-        vecOfCoarseNodes.resize(0);
-        vecOfFreeNodes.resize(G.upperNodeIdBound(),true);
-
+        vecOfOccupiedNodes.resize(0);
+        vecOfCandidates.resize(0);
         vecOfNodes=G.nodes();
         for(count i=0;i<vecOfNodes.size();i++){
           c=vecOfNodes[i];
           if(G.degree(c)==courseningDegree){
-            vecOfCoarseNodes.push_back(i);
+            vecOfCandidates.push_back(c);
           }
         }
         if(Random){
-          std::random_shuffle (vecOfCoarseNodes.begin(), vecOfCoarseNodes.end());
+          std::random_shuffle (vecOfCandidates.begin(), vecOfCandidates.end());
         }
-        for(count i=0;i<vecOfCoarseNodes.size();i++){
-          c=vecOfCoarseNodes[i];
-          if(vecOfFreeNodes[c]){
+        for(count i=0;i<vecOfCandidates.size();i++){
+          c=vecOfCandidates[i];
+          if(std::find(vecOfOccupiedNodes.begin(), vecOfOccupiedNodes.end(), c) == vecOfOccupiedNodes.end()){
+            vecOfNeighbors=G.neighbors(c);
             search=true;
             l=0;
-            vecOfNeighbours=G.neighbors(c);
-            while((search)&&(l<vecOfNeighbours.size())){
-              s=vecOfNeighbours[l];
-              if(vecOfFreeNodes[s]){
-                l++;
-                while((search)&&(l<vecOfNeighbours.size())){
-                  w=vecOfNeighbours[l];
-                  if(vecOfFreeNodes[w]){
-                    vecOfFreeNodes[s]=false;
-                    vecOfFreeNodes[c]=false;
-                    vecOfFreeNodes[w]=false;
-                    search=false;
-                    indices.push_back(std::make_tuple(c,s,w));
-                  }
-                  else{
-                    l++;
-                  }
-                }
+            if((search)&&(l<vecOfNeighbors.size())){
+              w=vecOfNeighbors[l];
+              if(std::find(vecOfOccupiedNodes.begin(), vecOfOccupiedNodes.end(), w) != vecOfOccupiedNodes.end()){
+                search=false;
               }
               else{
                 l++;
               }
-            }//End while
+            }
+            if(search){
+              for(count j=0;j<vecOfNeighbors.size();j++){
+                w=vecOfNeighbors[j];
+                vecOfOccupiedNodes.push_back(w);
+              }
+              vecOfChosenNodes.push_back(c);
+            }
           }
         }
-        return indices;
+        return vecOfChosenNodes;
       }
     /**************************************************************************
     void CurrentFlowGroupCloseness::uncoarseEfffectiveResistanceDistanceMatrix(count ID){
@@ -323,23 +320,23 @@ namespace NetworKit {
       bool search;
       count l;
       node c,s,w;
-      double edgeWeightcs,edgeWeightss,edgeWeightsw;
+      double edgeWeightcs,edgeWeightsw;
       std::vector<node> vecOfNodes,vecOfSupernodes;
+      std::vector<double> vecOfWeights;
       std::vector<std::pair<node,node>> mapping;
-      std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles;
 
-      vecOfNodes=G.nodes();
       vecOfSupernodes.resize(0);
       mapping.resize(0);
-      vecOfTriangles.resize(0);
-      for(count c_i=0;c_i<vecOfNodes.size();c_i++){
-        c=vecOfNodes[c_i];
+      vecOfNodes=G.nodes();
+      vecOfWeights.resize(1);
+      for(count i=0;i<vecOfNodes.size();i++){
+        c=vecOfNodes[i];
         if(G.degree(c)==1){
           s=G.randomNeighbor(c);
           if(std::find(vecOfSupernodes.begin(), vecOfSupernodes.end(), s) == vecOfSupernodes.end()){
             vecOfSupernodes.push_back(s);
             mapping.push_back (std::make_pair(s,c));
-            vecOfPeripheralNodes[c]=true;
+            vecOfPeripheralNodes.push_back(c);
           }
           else{
             search = true;
@@ -353,96 +350,139 @@ namespace NetworKit {
             }//end while
             edgeWeightcs=G.weight(c,s);
             edgeWeightsw=G.weight(s,w);
-            edgeWeightsw=1./edgeWeightcs+1./edgeWeightsw;
-            edgeWeightsw=1./edgeWeightsw;
+            edgeWeightsw=edgeWeightcs+edgeWeightsw;
             G.setWeight(s,w,edgeWeightsw);
+            vecOfWeights[0]=edgeWeightcs;
+            ERDLevel coarsed(c,G.neighbors(c),vecOfWeights);
+            coarsedNodes.push_back(coarsed);
             G.removeNode(c);
-            vecOfTriangles.push_back(std::make_tuple(c,s,w,edgeWeightcs,0.,edgeWeightsw));
           }//end else
         }
       }
-      ERDLevel Level(1,vecOfTriangles);
-      LevelList.push_back(Level);
     }
     /***************************************************************************/
-    void CurrentFlowGroupCloseness::coarseGraph(std::vector<std::tuple<count,count,count>> matchings,count ID){
-      bool search;
-      count a,l,c_i,s_i,w_i;
+    void CurrentFlowGroupCloseness::coarseGraph(std::vector<node> vecOfChosenNodes,count degree){
       node c,s,w;
       double edgeWeightcs,edgeWeightcw,edgeWeightsw;
-      std::vector<node> vecOfNodes;
-      std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles;
+      std::vector<node> vecOfNeighbors;
+      std::vector<double> vecOfWeights;
 
-      vecOfNodes=G.nodes();
-      vecOfTriangles.resize(0);
-
-      for(count i=0;i<matchings.size();i++){
-        search=false;
-        c=std::get<0>(matchings[i]);
-        s=std::get<1>(matchings[i]);
-        w_i=std::get<2>(matchings[i]);
-        w=vecOfNodes[w_i];
-        edgeWeightcs=G.weight(c,s);
-        edgeWeightcw=G.weight(c,w);
-        edgeWeightsw=1./edgeWeightcs+1/edgeWeightcw;
-        edgeWeightsw=1./edgeWeightsw;
-        edgeWeightsw+=G.weight(s,w);
-        G.setWeight(s,w,edgeWeightsw);
-        vecOfTriangles.push_back(std::make_tuple(c,s,w,edgeWeightcs,edgeWeightcw,edgeWeightsw));
-        G.removeNode(c);
-        numberOfCoarsedNodes++;
-      }
-      /*
-      arma::uvec indices(vecOfNodes.size()-matchings.size());
-      a=0;
-      l=0;
-      for(count i=0;i<vecOfNodes.size();i++){
-        if(std::get<0>(matchings[l])==i){
-          if(l<matchings.size()-1)
-            l++;
-        }
-        else{
-          indices(a)=i;
-          a++;
+      vecOfWeights.resize(degree);
+      /*Path Coarsenening*/
+      if(degree==2){
+        for(count i=0;i<vecOfChosenNodes.size();i++){
+          c=vecOfChosenNodes[i];
+          vecOfNeighbors=G.neighbors(c);
+          s=vecOfNeighbors[0];
+          w=vecOfNeighbors[1];
+          edgeWeightcs=G.weight(c,s);
+          edgeWeightcw=G.weight(c,w);
+          edgeWeightsw=edgeWeightcs+edgeWeightcw;
+          /*Path Merge*/
+          if(G.weight(s,w)!=0){
+            edgeWeightsw=1./edgeWeightsw;
+            edgeWeightsw+=1./G.weight(s,w);
+            edgeWeightsw=1./edgeWeightsw;
+          }
+          G.setWeight(s,w,edgeWeightsw);
+          for(count j=0;j<vecOfNeighbors.size();j++){
+            vecOfWeights[j]=G.weight(c,vecOfNeighbors[j]);
+          }
+          ERDLevel coarsed(c,vecOfNeighbors,vecOfWeights);
+          G.removeNode(c);
         }
       }
-      for(count i=0;i<matchings.size();i++){
-        vecOfNodes.erase(vecOfNodes.begin()+std::get<0>(matchings[i])-i);
+      /*Star*/
+      else{
+        for(count i=0;i<vecOfChosenNodes.size();i++){
+          c=vecOfChosenNodes[i];
+          computeStarCliqueWeights(c);
+          vecOfNeighbors=G.neighbors(c);
+          for(count j=0;j<vecOfNeighbors.size();j++){
+            vecOfWeights[j]=G.weight(c,vecOfNeighbors[j]);
+          }
+          ERDLevel coarsed(c,vecOfNeighbors,vecOfWeights);
+          G.removeNode(c);
+        }
       }
-      L=L.submat(indices, indices);
-      */
-      ERDLevel Level(ID,vecOfTriangles);
-      LevelList.push_back(Level);
     }
 
-    arma::Mat<double> CurrentFlowGroupCloseness::computePinvOfLaplacian(){
-      node v;
-      node w;
-      count n;
-      double factor;
-      std::vector<node> vecOfNodes;
-      vecOfNodes=G.nodes();
-      n=vecOfNodes.size();
-      arma::Mat<double> L(n,n);
-      L.zeros();
-      for(count i=0;i<n;i++){
-        v=vecOfNodes[i];
-        for(count j=i+1;j<n;j++){
-          w=vecOfNodes[j];
-          if(G.hasEdge(v,w)){
-            L(i,j)=-G.weight(v,w);
-            L(j,i)=-G.weight(v,w);
-            L(i,i)+=G.weight(v,w);
-            L(j,j)+=G.weight(v,w);
+    void CurrentFlowGroupCloseness::computeStarCliqueWeights(node c){
+      node v,w,x,y;
+      double S,S2,weight;
+      std::vector<node> vecOfNeighbors;
+
+      S=0.;
+      vecOfNeighbors=G.neighbors(c);
+      for(count i=0;i<vecOfNeighbors.size();i++){
+        v=vecOfNeighbors[i];
+        S2=0.;
+        for(count j=0;j<vecOfNeighbors.size();j++){
+          w=vecOfNeighbors[j];
+          if(w!=v){
+            S2*=G.weight(v,w);
           }
         }
+        S+=S2;
       }
-      arma::Mat<double> J(n,n);
-      factor=1./n;
+      for(count i=0;i<vecOfNeighbors.size();i++){
+        v=vecOfNeighbors[i];
+        for(count j=0;j<vecOfNeighbors.size();j++){
+          w=vecOfNeighbors[j];
+          if(v!=w){
+            weight=0.;
+            for(count k=0;k<vecOfNeighbors.size();k++){
+              x=vecOfNeighbors[k];
+              if((x!=v)&&(x!=w)){
+                for(count l=0;l<vecOfNeighbors.size();l++){
+                  y=vecOfNeighbors[l];
+                  if((y!=v)&&(y!=w)&&(y!=x)){
+                    weight*=G.weight(x,y);
+                  }//if y
+                }//for y
+              }//if x
+            }//for x
+            weight=S/weight;
+            if(G.weight(v,w)!=0){
+              weight=1./weight;
+              weight+=1./G.weight(v,w);
+              weight=1./weight;
+            }
+            G.setWeight(x,y,weight);
+          }// if w
+        }// for w
+      }// for v
+    }
+    arma::Mat<double> CurrentFlowGroupCloseness::computePinvOfLaplacian(){
+      node v,w;
+      count w_i;
+      double factor, weight;
+      std::vector<node> vecOfNodes, vecOfNeighbours;
+      std::vector<count> reverse;
+      vecOfNodes=G.nodes();
+      arma::Mat<double> L(G.numberOfNodes(),G.numberOfNodes());
+      L.zeros();
+      reverse.resize(G.upperNodeIdBound());
+      for(count i=0;i<vecOfNodes.size();i++){
+        reverse[vecOfNodes[i]]=i;
+      }
+      for(count i=0;i<G.numberOfNodes();i++){
+        v=vecOfNodes[i];
+        vecOfNeighbours=G.neighbors(v);
+        for(count j=0;j<vecOfNeighbours.size();j++){
+          w=vecOfNeighbours[j];
+          w_i=reverse[w];
+          weight=G.weight(v,w);
+          L(i,w_i)=-weight;
+          L(i,i)+=weight;
+        }
+      }
+      arma::Mat<double> J(L.n_rows,L.n_rows);
+      factor=1./(double)(L.n_rows);
       J.fill(factor);
-      L= L+J;
-      L=arma::inv_sympd(L);
       L= L-J;
+      L=arma::inv(L);
+      L= L+J;
       return L;
     }
 } /* namespace NetworKit*/

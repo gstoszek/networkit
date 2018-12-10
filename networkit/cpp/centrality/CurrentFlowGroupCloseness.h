@@ -7,6 +7,7 @@
 #ifndef CURRENTFLOWGROUPCLOSENESS_H_
 #define CURRENTFLOWGROUPCLOSENESS_H_
 
+#define ARMA_DONT_PRINT_ERRORS
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
@@ -20,7 +21,7 @@ namespace NetworKit {
     /*
      *
      */
-    class CurrentFlowGroupCloseness: public NetworKit::Centrality {
+    class CurrentFlowGroupCloseness: public NetworKit::Algorithm {
 
     public:
         /**
@@ -29,7 +30,7 @@ namespace NetworKit {
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
          */
-        CurrentFlowGroupCloseness(Graph G,const count k = 2,const count CB = 2,const double epsilon=0.1);
+        CurrentFlowGroupCloseness(Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1);
         /**
          * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
          */
@@ -50,24 +51,24 @@ namespace NetworKit {
 
     private:
 
+        Graph& G;
         count k=2;
         count CB=2;
+
         count n;
-        count numberOfCoarsedNodes;
         double CFGCC;
         double epsilon;
 
-        std::vector<bool> vecOfPeripheralNodes;
-
+        std::vector<node> vecOfPeripheralNodes;
         std::vector<node> S;
-        std::vector<ERDLevel> LevelList;
-        //EffectiveResistanceDistance ERD;
+        std::vector<ERDLevel> coarsedNodes;
         void greedy(arma::Mat<double> L);
         count updateMinDegree();
-        std::vector<std::tuple<count,count,count>> coarsingIndices(count cDegree,bool Random);
+        std::vector<node> coarsingIndices(count cDegree,bool Random);
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
         void mergePeripheralNodes();
-        void coarseGraph(std::vector<std::tuple<count,count,count>> matchings,count ID);
+        void coarseGraph(std::vector<node> vecOfChosenNodes,count degree);
+        void computeStarCliqueWeights(node c);
         arma::Mat<double> computePinvOfLaplacian();
 
     };
