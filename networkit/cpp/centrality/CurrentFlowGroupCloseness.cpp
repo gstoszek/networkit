@@ -20,13 +20,14 @@
 
 namespace NetworKit {
 
-   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon) : G(G),k(k),CB(CB),epsilon(epsilon){
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon, std::string type)
+    : G(G),k(k),CB(CB),epsilon(epsilon),type(type){
      if (G.isDirected()) throw std::runtime_error("Graph is directed!");
      ConnectedComponents cc(G);
      cc.run();
      if (cc.getPartition().numberOfSubsets() > 1) throw std::runtime_error("Graph has more then one component!");
      if(k>=G.numberOfNodes()) throw std::runtime_error("Size of Group greater then number of nodes!");
-
+     if((type!="Pinv")&&(type!="LinearSolver")) throw std::runtime_error("Wrong type!");
      auto start = std::chrono::high_resolution_clock::now();
      auto end = std::chrono::high_resolution_clock::now();
      std::chrono::duration<double> diff;
@@ -47,7 +48,6 @@ namespace NetworKit {
      auto end = std::chrono::high_resolution_clock::now();
      std::chrono::duration<double> diff;
      std::vector<node> vecOfChosenNodes;
-     arma::Mat<double> Pinv;
 
      ID=0;
      if(CB>0){
@@ -72,15 +72,12 @@ namespace NetworKit {
       std::cout << "Coarsening of G finished in: " << diff.count() << "(s)" << "\n";
       std::cout << "Number of nodes after coarsening: " << G.numberOfNodes() << "\n";
       start = std::chrono::high_resolution_clock::now();
-
-      Pinv=computePinvOfLaplacian();
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Construction of Pinv(L) in: " << diff.count() << "(s)" << "\n";
-      //greedy();
-      //std::cout<<"Level:" <<ID<<" with the value: " << CFGCC << "\n";
-      start = std::chrono::high_resolution_clock::now();
+
       /*
+      start = std::chrono::high_resolution_clock::now();
       if(CB>1){
         ID=LevelList[LevelList.size()-1].getID();
         std::cout<<"ID="<<ID<<"\n";
@@ -91,12 +88,16 @@ namespace NetworKit {
           ID--;
         }
       }
-      */
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Uncoarsening in: " << diff.count() << "(s)" << "\n";
+      */
       start = std::chrono::high_resolution_clock::now();
-      greedy(Pinv);
+      if(type=="Pinv")
+        greedy();
+      else if(type=="LinearSolver"){
+        greedyLAMG();
+      }
       end = std::chrono::high_resolution_clock::now();
       diff = end-start;
       std::cout << "Greedy in: " << diff.count() << "(s)" << "\n\n";
@@ -107,14 +108,25 @@ namespace NetworKit {
     double CurrentFlowGroupCloseness::getCFGCC() {
       return CFGCC;
     }
-    void CurrentFlowGroupCloseness::greedy(arma::Mat<double> L){
-      count sampleSize,v_i,w_i;
+    void CurrentFlowGroupCloseness::greedy(){
+      count v_i,w_i;
       node s,v,w;
       double centrality,prevCFGCC,bestMarginalGain,distance;
-      std::vector<bool> V;
+      std::vector<bool> V,W;
       std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs,cutNodes;
       std::vector<count> reverse;
       std::vector<double> mindst, dst, bst, minApprox, bstApprox, marginalGain;
+
+      arma::Mat<double> Pinv;
+      Pinv=computePinvOfLaplacian();
+
+      CFGCC=n*n*n;
+      prevCFGCC=CFGCC;
+      V.resize(G.numberOfNodes(),true);
+      W.resize(G.numberOfNodes(),true);
+      mindst.resize(G.numberOfNodes(),n*n);
+      marginalGain.resize(G.numberOfNodes(),CFGCC);
+
       vecOfSamples.resize(0);
       vecOfPeriphs.resize(0);
       vecOfNodes = G.nodes();
@@ -122,7 +134,6 @@ namespace NetworKit {
       for(count i=0;i<vecOfNodes.size();i++){
         reverse[vecOfNodes[i]]=i;
       }
-
       for(count i=0;i<vecOfNodes.size();i++){
         v=vecOfNodes[i];
         if(std::find(vecOfPeripheralNodes.begin(), vecOfPeripheralNodes.end(), v) != vecOfPeripheralNodes.end())
@@ -131,17 +142,6 @@ namespace NetworKit {
           vecOfPeriphs.push_back(v);
         }
       }
-      /*
-      sampleSize=(count)(log(vecOfSamples.size())/(2*epsilon*epsilon));
-      if(sampleSize>vecOfSamples.size()){
-        sampleSize=vecOfSamples.size();
-      }
-      */
-      CFGCC=n*n*n;
-      prevCFGCC=CFGCC;
-      V.resize(G.numberOfNodes(),true);
-      mindst.resize(G.numberOfNodes(),n*n);
-      marginalGain.resize(G.numberOfNodes(),CFGCC);
       for(count i=0;i<k;i++){
         std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
         bestMarginalGain=0.;
@@ -152,11 +152,11 @@ namespace NetworKit {
             dst=mindst;
             centrality = 0.;
             cutNodes.resize(0);
-            for (count l = 0; l < sampleSize; l++) {
+            for (count l = 0; l < vecOfSamples.size(); l++) {
               w=vecOfSamples[l];
               w_i=reverse[w];
               if(W[w_i]){
-                distance=L(v_i,v_i)+L(w_i,w_i)-2*L(v_i,w_i);
+                distance=Pinv(v_i,v_i)+Pinv(w_i,w_i)-2*Pinv(v_i,w_i);
                 if (distance< mindst[w_i]){
                   dst[w_i]=distance;
                   if(distance<bst[w_i])
@@ -169,7 +169,7 @@ namespace NetworKit {
               w=vecOfPeriphs[l];
               w_i=reverse[w];
               if(W[w_i]){
-                distance=L(v_i,v_i)+L(w_i,w_i)-2*L(v_i,w_i);
+                distance=Pinv(v_i,v_i)+Pinv(w_i,w_i)-2*Pinv(v_i,w_i);
                 if (distance< mindst[w_i]){
                   dst[w_i]=distance;
                   if(distance<bst[w_i])
@@ -177,6 +177,88 @@ namespace NetworKit {
                 }
                 centrality += dst[w_i];
               }
+            }
+            marginalGain[v_i]=prevCFGCC-centrality;
+            if (centrality < CFGCC) {
+              CFGCC = centrality;
+              bst=dst;
+              s = v;
+              bestMarginalGain=marginalGain[v_i];
+            }
+          }
+        }
+        S[i]=s;
+        V[s]=false;
+        mindst=bst;
+        prevCFGCC=CFGCC;
+      }
+     CFGCC = (double)(n)/CFGCC;
+    }
+    void CurrentFlowGroupCloseness::greedyLAMG(){
+      count v_i,w_i;
+      node s,v,w;
+      double centrality,prevCFGCC,bestMarginalGain,distance;
+      std::vector<bool> V;
+      std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs;
+      std::vector<count> reverse;
+      std::vector<double> mindst, dst, bst, minApprox, bstApprox, marginalGain;
+      Lamg<CSRMatrix> lamg;
+      CSRMatrix matrix = CSRMatrix::laplacianMatrix(G);
+      lamg.setupConnected(matrix);
+
+      CFGCC=n*n*n;
+      prevCFGCC=CFGCC;
+      mindst.resize(G.numberOfNodes(),n*n);
+      marginalGain.resize(G.numberOfNodes(),CFGCC);
+
+      vecOfSamples.resize(0);
+      vecOfPeriphs.resize(0);
+      vecOfNodes = G.nodes();
+      reverse.resize(G.upperNodeIdBound());
+      for(count i=0;i<vecOfNodes.size();i++){
+        reverse[vecOfNodes[i]]=i;
+      }
+      for(count i=0;i<vecOfNodes.size();i++){
+        v=vecOfNodes[i];
+        if(std::find(vecOfPeripheralNodes.begin(), vecOfPeripheralNodes.end(), v) != vecOfPeripheralNodes.end())
+          vecOfSamples.push_back(v);
+        else{
+          vecOfPeriphs.push_back(v);
+        }
+      }
+      Vector solution(vecOfSamples.size());
+      Vector rhs(vecOfSamples.size(), 0.);
+
+      for(count i=0;i<k;i++){
+        std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
+        bestMarginalGain=0.;
+        for (count j=0; j<vecOfSamples.size();j++) {
+          v=vecOfSamples[j];
+          v_i=reverse[v];
+          if(V[v_i] && (bestMarginalGain<marginalGain[v_i])){
+            rhs[v_i]=1.;
+            dst=mindst;
+            centrality = 0.;
+            for (count l = 0; l < vecOfSamples.size(); l++) {
+              w=vecOfSamples[l];
+              w_i=reverse[w];
+              rhs[w_i]=-1.;
+              lamg.solve(rhs, solution);
+              distance=fabs(solution[v_i]-solution[w_i]);
+              if (distance< mindst[w_i])
+                dst[w_i]=distance;
+              centrality +=dst[w_i];
+              rhs[w_i]=0.;
+            }
+            for (count l = 0 ; l < vecOfPeriphs.size(); l++) {
+              w=vecOfPeriphs[l];
+              w_i=reverse[w];
+              rhs[w_i]=-1.;
+              distance=fabs(solution[v_i]-solution[w_i]);
+              if (distance< mindst[w_i])
+                dst[w_i]=distance;
+              centrality += dst[w_i];
+              rhs[w_i]=0.;
             }
             marginalGain[v_i]=prevCFGCC-centrality;
             if (centrality < CFGCC) {
@@ -216,6 +298,7 @@ namespace NetworKit {
       }
       return min;
     }
+
     std::vector<node> CurrentFlowGroupCloseness::coarsingIndices(count courseningDegree, bool Random){
         bool search;
         count l;

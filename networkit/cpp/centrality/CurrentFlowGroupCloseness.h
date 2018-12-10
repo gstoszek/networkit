@@ -30,7 +30,7 @@ namespace NetworKit {
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
          */
-        CurrentFlowGroupCloseness(Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1);
+        CurrentFlowGroupCloseness(Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1, const std::string type="Pinv");
         /**
          * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
          */
@@ -54,15 +54,16 @@ namespace NetworKit {
         Graph& G;
         count k=2;
         count CB=2;
+        std::string type="Pinv";
 
-        count n;
         double CFGCC;
         double epsilon;
-
+        count n;
         std::vector<node> vecOfPeripheralNodes;
         std::vector<node> S;
         std::vector<ERDLevel> coarsedNodes;
-        void greedy(arma::Mat<double> L);
+        void greedy();
+        void greedyLAMG();
         count updateMinDegree();
         std::vector<node> coarsingIndices(count cDegree,bool Random);
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
