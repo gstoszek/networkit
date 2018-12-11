@@ -198,11 +198,11 @@ namespace NetworKit {
       std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs;
       std::vector<count> reverse;
       std::vector<double> mindst, dst, bst, minApprox, bstApprox, marginalGain;
-
+      std::cout<<"***************Setup***************\n";
       Lamg<CSRMatrix> lamg;
       CSRMatrix matrix = CSRMatrix::laplacianMatrix(G);
       lamg.setupConnected(matrix);
-
+      std::cout<<"**************Setup***************\n";
       CFGCC=n*n*n;
       prevCFGCC=CFGCC;
       mindst.resize(G.numberOfNodes(),n*n);
@@ -223,9 +223,10 @@ namespace NetworKit {
           vecOfPeriphs.push_back(v);
         }
       }
-      Vector solution(vecOfNodes.size());
+      Vector result(vecOfNodes.size());
       Vector rhs(vecOfNodes.size(), 0.);
       Vector zeroVector(vecOfNodes.size(), 0.);
+      std::cout<<"********************1***************\n";
       for(count i=0;i<k;i++){
         std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
         bestMarginalGain=0.;
@@ -241,9 +242,9 @@ namespace NetworKit {
                 w=vecOfSamples[l];
                 w_i=reverse[w];
                 rhs[w_i]=-1.;
-                solution=zeroVector;
-                lamg.solve(rhs, solution);
-                distance=fabs(solution[v_i]-solution[w_i]);
+                result=zeroVector;
+                lamg.solve(rhs, result);
+                distance=fabs(result[v_i]-result[w_i]);
                 if (distance< mindst[w_i])
                   dst[w_i]=distance;
                 centrality +=dst[w_i];
@@ -254,9 +255,9 @@ namespace NetworKit {
               w=vecOfPeriphs[l];
               w_i=reverse[w];
               rhs[w_i]=-1.;
-              solution=zeroVector;
-              lamg.solve(rhs, solution);
-              distance=fabs(solution[v_i]-solution[w_i]);
+              result=zeroVector;
+              lamg.solve(rhs, result);
+              distance=fabs(result[v_i]-result[w_i]);
               if (distance< mindst[w_i])
                 dst[w_i]=distance;
               centrality += dst[w_i];
