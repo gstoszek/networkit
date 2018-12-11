@@ -70,10 +70,6 @@ namespace NetworKit {
       diff = end-start;
       std::cout << "Coarsening of G finished in: " << diff.count() << "(s)" << "\n";
       std::cout << "Number of nodes after coarsening: " << G.numberOfNodes() << "\n";
-      start = std::chrono::high_resolution_clock::now();
-      end = std::chrono::high_resolution_clock::now();
-      diff = end-start;
-      std::cout << "Construction of Pinv(L) in: " << diff.count() << "(s)" << "\n";
 
       /*
       start = std::chrono::high_resolution_clock::now();
@@ -91,6 +87,7 @@ namespace NetworKit {
       diff = end-start;
       std::cout << "Uncoarsening in: " << diff.count() << "(s)" << "\n";
       */
+      std::cout << "Starting Greedy-Algorithm\n";
       start = std::chrono::high_resolution_clock::now();
       if(doInvert)
         greedy();
@@ -201,6 +198,7 @@ namespace NetworKit {
       std::vector<node> vecOfNodes,vecOfSamples, vecOfPeriphs;
       std::vector<count> reverse;
       std::vector<double> mindst, dst, bst, minApprox, bstApprox, marginalGain;
+
       Lamg<CSRMatrix> lamg;
       CSRMatrix matrix = CSRMatrix::laplacianMatrix(G);
       lamg.setupConnected(matrix);
@@ -209,7 +207,7 @@ namespace NetworKit {
       prevCFGCC=CFGCC;
       mindst.resize(G.numberOfNodes(),n*n);
       marginalGain.resize(G.numberOfNodes(),CFGCC);
-
+      V.resize(G.numberOfNodes(),true);
       vecOfSamples.resize(0);
       vecOfPeriphs.resize(0);
       vecOfNodes = G.nodes();
@@ -225,9 +223,9 @@ namespace NetworKit {
           vecOfPeriphs.push_back(v);
         }
       }
-      Vector solution(vecOfSamples.size());
-      Vector rhs(vecOfSamples.size(), 0.);
-
+      Vector solution(vecOfNodes.size());
+      Vector rhs(vecOfNodes.size(), 0.);
+      Vector zeroVector(vecOfNodes.size(), 0.);
       for(count i=0;i<k;i++){
         std::random_shuffle (vecOfSamples.begin(), vecOfSamples.end());
         bestMarginalGain=0.;
@@ -239,20 +237,25 @@ namespace NetworKit {
             dst=mindst;
             centrality = 0.;
             for (count l = 0; l < vecOfSamples.size(); l++) {
-              w=vecOfSamples[l];
-              w_i=reverse[w];
-              rhs[w_i]=-1.;
-              lamg.solve(rhs, solution);
-              distance=fabs(solution[v_i]-solution[w_i]);
-              if (distance< mindst[w_i])
-                dst[w_i]=distance;
-              centrality +=dst[w_i];
-              rhs[w_i]=0.;
+              if(v!=w){
+                w=vecOfSamples[l];
+                w_i=reverse[w];
+                rhs[w_i]=-1.;
+                solution=zeroVector;
+                lamg.solve(rhs, solution);
+                distance=fabs(solution[v_i]-solution[w_i]);
+                if (distance< mindst[w_i])
+                  dst[w_i]=distance;
+                centrality +=dst[w_i];
+                rhs[w_i]=0.;
+              }
             }
             for (count l = 0 ; l < vecOfPeriphs.size(); l++) {
               w=vecOfPeriphs[l];
               w_i=reverse[w];
               rhs[w_i]=-1.;
+              solution=zeroVector;
+              lamg.solve(rhs, solution);
               distance=fabs(solution[v_i]-solution[w_i]);
               if (distance< mindst[w_i])
                 dst[w_i]=distance;
@@ -266,6 +269,7 @@ namespace NetworKit {
               s = v;
               bestMarginalGain=marginalGain[v_i];
             }
+            rhs[v_i]=0.;
           }
         }
         S[i]=s;
