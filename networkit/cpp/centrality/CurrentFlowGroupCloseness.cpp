@@ -20,14 +20,13 @@
 
 namespace NetworKit {
 
-   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon, std::string type)
-    : G(G),k(k),CB(CB),epsilon(epsilon),type(type){
+   CurrentFlowGroupCloseness::CurrentFlowGroupCloseness(Graph& G,const count k, const count CB,const double epsilon, const bool doInvert)
+    : G(G),k(k),CB(CB),epsilon(epsilon),doInvert(doInvert){
      if (G.isDirected()) throw std::runtime_error("Graph is directed!");
      ConnectedComponents cc(G);
      cc.run();
      if (cc.getPartition().numberOfSubsets() > 1) throw std::runtime_error("Graph has more then one component!");
      if(k>=G.numberOfNodes()) throw std::runtime_error("Size of Group greater then number of nodes!");
-     if((type!="Pinv")&&(type!="LinearSolver")) throw std::runtime_error("Wrong type!");
      auto start = std::chrono::high_resolution_clock::now();
      auto end = std::chrono::high_resolution_clock::now();
      std::chrono::duration<double> diff;
@@ -93,9 +92,9 @@ namespace NetworKit {
       std::cout << "Uncoarsening in: " << diff.count() << "(s)" << "\n";
       */
       start = std::chrono::high_resolution_clock::now();
-      if(type=="Pinv")
+      if(doInvert)
         greedy();
-      else if(type=="LinearSolver"){
+      else{
         greedyLAMG();
       }
       end = std::chrono::high_resolution_clock::now();
