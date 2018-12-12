@@ -7,11 +7,10 @@
 #ifndef CURRENTFLOWGROUPCLOSENESS_H_
 #define CURRENTFLOWGROUPCLOSENESS_H_
 
+#define ARMA_DONT_PRINT_ERRORS
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
-#include "EffectiveResistanceDistance.h"
-#include "ERDLevel.h"
 #include "../components/ConnectedComponents.h"
 #include <armadillo>
 #include <algorithm>
@@ -20,7 +19,7 @@ namespace NetworKit {
     /*
      *
      */
-    class CurrentFlowGroupCloseness: public NetworKit::Centrality {
+    class CurrentFlowGroupCloseness: public NetworKit::Algorithm {
 
     public:
         /**
@@ -29,7 +28,7 @@ namespace NetworKit {
          * @param k Size of the group of nodes
          * @param CB If equal 0 runs simply algorithm without coursing, atherwise sets a Coarsening Bound
          */
-        CurrentFlowGroupCloseness(const Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1);
+        CurrentFlowGroupCloseness(Graph& G,const count k = 2,const count CB = 2,const double epsilon=0.1, const bool doInvert=true);
         /**
          * Computes group of size k with maximum closeness and coresponding value on the graph passed in the constructor.
          */
@@ -50,31 +49,30 @@ namespace NetworKit {
 
     private:
 
+        Graph& G;
         count k=2;
         count CB=2;
-        count n;
-        count numberOfCoarsedNodes;
+        bool doInvert=true;
+
         double CFGCC;
         double epsilon;
-
-        std::vector<bool> vecOfPeripheralNodes;
-
+        count n;
+        count limit;
+        std::vector<node> vecOfPeripheralNodes;
         std::vector<node> S;
-        std::vector<node> vecOfNodes;
-        std::vector<std::vector<node>> Adj;
-        std::vector<ERDLevel> LevelList;
-
-        //EffectiveResistanceDistance ERD;
-
-        arma::Mat<double> L;
-
+        std::vector<node> coarsedNodes;
+        std::vector<std::vector<node>> coarsedNeighbors;
+        std::vector<std::vector<double>> coarsedWeights;
         void greedy();
+        void greedyLAMG();
         count updateMinDegree();
-        std::vector<std::tuple<count,count,count>> coarsingIndices(count cDegree,bool Random);
+        std::vector<node> coarsingIndices(count cDegree,bool Random);
         void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
         void mergePeripheralNodes();
-        void coarseLaplacian(std::vector<std::tuple<count,count,count>> matchings,count ID);
-        void computePinvOfLaplacian();
+        void coarseGraph(std::vector<node> vecOfChosenNodes,count degree);
+        void computeStarCliqueWeights(node c);
+        arma::Mat<double> computePinvOfLaplacian();
+        double computeApproxDistances(std::vector<bool> W, std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox);
 
     };
 

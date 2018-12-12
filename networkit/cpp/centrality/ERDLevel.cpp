@@ -12,29 +12,36 @@
 #include <chrono>
 #include <stdlib.h>
 #include <cmath>
-#include <armadillo>
 #include <cstdlib>
 
 namespace NetworKit {
 
-  ERDLevel::ERDLevel(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
-    LevelID=ID;
-    LevelVecOfTriangles=vecOfTriangles;
+  ERDLevel::ERDLevel(node id,std::vector<node> vecOfNeighbors, std::vector<double> vecOfWeights){
+    ID=id;
+    nghbrs=vecOfNeighbors;
+    wghts=vecOfWeights;
   }
-  void ERDLevel::set(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
-    LevelID=ID;
-    LevelVecOfTriangles=vecOfTriangles;
+  void ERDLevel::set(node id,std::vector<node> vecOfNeighbors, std::vector<double> vecOfWeights){
+    ID=id;
+    nghbrs=vecOfNeighbors;
+    wghts=vecOfWeights;
   }
-  void ERDLevel::setID(count ID){
-    LevelID=ID;
+  void ERDLevel::setNode(node id){
+    ID=id;
   }
-  void ERDLevel::setVecOfTriangles(std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles){
-    LevelVecOfTriangles=vecOfTriangles;
+  void ERDLevel::setNeighbors(std::vector<node> vecOfNeighbors){
+    nghbrs=vecOfNeighbors;
   }
-  count ERDLevel::getID(){
-    return LevelID;
+  void ERDLevel::setWeights(std::vector<double> vecOfWeights){
+    wghts=vecOfWeights;
   }
-  std::vector<std::tuple<node,node,node,double,double,double>> ERDLevel::getVecOfTriangles(){
-    return LevelVecOfTriangles;
+  node ERDLevel::id(){
+    return ID;
+  }
+  std::vector<node> ERDLevel::neighbors(){
+    return nghbrs;
+  }
+  std::vector<double> ERDLevel::weights(){
+    return wghts;
   }
 } /* namespace NetworKit*/

@@ -10,7 +10,6 @@
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
-#include <armadillo>
 
 namespace NetworKit {
 
@@ -18,22 +17,25 @@ namespace NetworKit {
     {
     public:
 
-        ERDLevel(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles);
+        ERDLevel(node id,std::vector<node> vecOfNeighbors, std::vector<double> vecOfWeights);
 
-        void set(count ID,std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles);
+        void set(node ID,std::vector<node> vecOfNeighbors, std::vector<double> vecOfWeights);
+        void setNode(node ID);
+        void setNeighbors(std::vector<node> vecOfNeighbours);
+        void setWeights(std::vector<double> vecOfWeights);
 
-        void setID(count ID);
-        void setVecOfTriangles(std::vector<std::tuple<node,node,node,double,double,double>> vecOfTriangles);
-
-        count getID();
-        std::vector<std::tuple<node,node,node,double,double,double>> getVecOfTriangles();
+        node id();
+        std::vector<node> neighbors();
+        std::vector<double> weights();
 
         ~ERDLevel() {};
 
     private:
 
-        count LevelID;
-        std::vector<std::tuple<node,node,node,double,double,double>> LevelVecOfTriangles;
+        node ID;
+        std::vector<node> nghbrs;
+        std::vector<double> wghts;
+
     };
 
 

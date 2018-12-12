@@ -3,7 +3,7 @@
 *
 *      Author: gstoszek
 */
-
+#define ARMA_DONT_PRINT_ERRORS
 #include "EffectiveResistanceDistance.h"
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"

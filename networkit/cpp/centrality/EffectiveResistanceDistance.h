@@ -7,6 +7,7 @@
 #ifndef EFFECTIVERESISTANCEDISTANCE_H_
 #define EFFECTIVERESISTANCEDISTANCE_H_
 
+#define ARMA_DONT_PRINT_ERRORS
 #include "Centrality.h"
 #include "../algebraic/CSRMatrix.h"
 #include "../numerics/LAMG/Lamg.h"
