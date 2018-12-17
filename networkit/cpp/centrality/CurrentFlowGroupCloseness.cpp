@@ -109,7 +109,7 @@ namespace NetworKit {
     void CurrentFlowGroupCloseness::greedy(){
       count v_i,w_i;
       node s,v,w;
-      double d,prevD,bestMarginalGain,distance;
+      double d,dApprox,prevD,bestMarginalGain,distance;
       std::vector<bool> V,E;
       std::vector<node> vecOfNodes;
       std::vector<count> reverse;
@@ -157,10 +157,12 @@ namespace NetworKit {
               d +=dst[w_i];
             }
             dstApprox=SdstApprox;
-            d+=computeApproxDistances(E, reverse, dst, &dstApprox);
-            marginalGain[v_i]=prevD-d;
-            std::cout<<"d: "<< d << "\n";
-            if (d < CFGCC) {
+            dApprox=computeApproxDistances(E, reverse, dst, &dstApprox);
+            marginalGain[v_i]=prevD-d-dApprox;
+            if (d+dApprox < CFGCC) {
+              /*
+              d+=computeExactDistance(E,reverse,dst,&dstApprox,Pinv);
+              */
               CFGCC = d;
               tmpdst=dst;
               tmpApprox=dstApprox;
@@ -331,62 +333,6 @@ namespace NetworKit {
         }
         return vecOfChosenNodes;
       }
-    /**************************************************************************
-    void CurrentFlowGroupCloseness::uncoarseEfffectiveResistanceDistanceMatrix(count ID){
-      bool search;
-      count l,j;
-      node c,s,w;
-      double edgeWeightcs,edgeWeightcw,edgeWeightsw;
-      std::vector<std::tuple<node,node,count,double,double,double>> vecOfTriangles;
-      std::tuple<node,node,count,double,double,double> triangle;
-
-      vecOfTriangles=LevelList[ID-1].getVecOfTriangles();
-      for(count i=0;i<vecOfTriangles.size();i++){
-        j=vecOfTriangles.size()-1-i;
-        triangle=vecOfTriangles[j];
-        ERD.uncoarseTriangle(vecOfNodes,triangle);
-        c=std::get<0>(triangle);
-        s=std::get<1>(triangle);
-        w=std::get<2>(triangle);
-        edgeWeightcs=std::get<3>(triangle);
-        edgeWeightcw=std::get<4>(triangle);
-        edgeWeightsw=1./edgeWeightcs+1./edgeWeightsw;
-        edgeWeightsw=1./edgeWeightsw;
-        //vecOfNodes.push_back(c);
-        //Adj[s].push_back (c);
-        //Adj[c].push_back(s);
-        if(std::get<4>(triangle)>0){
-          //Adj[c].push_back (w);
-          //Adj[w].push_back(c);
-        }
-        if(!(std::get<5>(triangle)==edgeWeightsw)){
-          search = true;
-          l= 0;
-          while((l<Adj[s].size())&&(search)){
-            if(Adj[s][l]==w){
-              Adj[s].erase(Adj[s].begin()+l);
-              search=false;
-            }
-            else{
-              l++;
-            }
-          }//end while
-          search = true;
-          l= 0;
-          while((l<Adj[w].size())&&(search)){
-            if(Adj[w][l]==s){
-                Adj[w].erase(Adj[w].begin()+l);
-                search=false;
-              }
-          else{
-            l++;
-          }
-          }//end while
-        }//end if
-        numberOfCoarsedNodes--;
-      }//end for
-    }
-    /***************************************************************************/
     void CurrentFlowGroupCloseness::mergePeripheralNodes(){
       int pos;
       node c,s,w;
@@ -463,7 +409,7 @@ namespace NetworKit {
 
     void CurrentFlowGroupCloseness::computeStarCliqueWeights(node c){
       node v,w,x;
-      double S,weight;
+      double Sum,weight;
       std::vector<node> vecOfNeighbors;
 
       vecOfNeighbors=G.neighbors(c);
@@ -476,7 +422,7 @@ namespace NetworKit {
             weight*=G.weight(c,w);
           }
         }
-        S+=weight;
+        Sum+=weight;
       }
       for(count i=0;i<vecOfNeighbors.size();i++){
         v=vecOfNeighbors[i];
@@ -489,7 +435,7 @@ namespace NetworKit {
               weight*=G.weight(c,x);
             }//if x
           }//for x
-          weight=S/weight;
+          weight=Sum/weight;
           if(G.weight(v,w)!=0.){
             weight=1./weight;
             weight+=1./G.weight(v,w);
@@ -531,8 +477,8 @@ namespace NetworKit {
       L= L-J;
       return L;
     }
-    double CurrentFlowGroupCloseness::computeApproxDistances(std::vector<bool> W,std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox){
-      count w_j;
+    double CurrentFlowGroupCloseness::computeApproxDistances(std::vector<bool> E,std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox){
+      count w_j,l;
       node c,w;
       double d,distance;
       d=0.;
@@ -541,22 +487,183 @@ namespace NetworKit {
 
       tmp=*dstApprox;
       for(count i=0;i<coarsedNodes.size();i++){
-        neighbors=coarsedNeighbors[i];
-        weights=coarsedWeights[i];
+        l=coarsedNodes.size()-i-1;
+        neighbors=coarsedNeighbors[l];
+        weights=coarsedWeights[l];
         distance=0.;
         for(count j=0;j<neighbors.size();j++){
           w=neighbors[j];
           w_j=reverse[w];
-          if(W[w])
-            distance=std::min(distance,dst[w_j]+weights[j]);
+          if(E[w])
+            distance=std::max(distance,dst[w_j]-weights[j]);
           else{
-            distance=std::min(distance,tmp[w_j]+weights[j]);
+            distance=std::max(distance,tmp[w_j]-weights[j]);
           }
-          tmp[i]=std::max(distance,tmp[i]);
+          tmp[l]=std::min(distance,tmp[l]);
         }
         d+=distance;
       }
       *dstApprox=tmp;
       return d;
+    }
+    double CurrentFlowGroupCloseness::computeExactDistance(std::vector<bool> E,std::vector<node> reverse,std::vector<double> dst, std::vector<double> *dstApprox, arma::Mat<double> Pinv){
+      std::cout<<"Start EXACT"<<"\n";
+      count l;
+      double distance,distanceTMP,sum,weight,d;
+      std::vector<count> neighbors_i;
+      std::vector<double> cDistances,cDistancesTMP,xDistances,xDistancesTMP,weights,cdst,sdst,tmp;
+      std::vector<node> neighbors;
+      std::vector<std::vector<double>> coarsedDistances;
+      arma::Mat<double> nDistances,nDistancesTMP;
+
+      tmp=*dstApprox;
+      coarsedDistances.resize(coarsedNodes.size());
+      std::cout<<"Start CoarsedNodeLoop"<<"\n";
+      d=0.;
+      for(count i=0;i<coarsedNodes.size();i++){
+        std::cout<<"Loop: "<< i<<"\n";
+        l=coarsedNodes.size()-i-1;
+        distance=0.;
+        weights=coarsedWeights[l];
+        neighbors=coarsedNeighbors[l];
+        //Indices are computed central here
+        neighbors_i.resize(neighbors.size());
+        xDistances.resize(neighbors.size());
+        std::cout<<"calc :"<< coarsedNodes[l] << "\n";
+        std::cout<<"with neighbors: \n";
+        for(count j=0;j<neighbors.size();j++){
+          std::cout<< neighbors[j] << " , ";
+          neighbors_i[j]=reverse[neighbors[j]];
+          if(E[neighbors[j]])
+            xDistances[j]=dst[neighbors_i[j]];
+          else
+            xDistances[j]=tmp[neighbors_i[j]];
+        }
+        std::cout<<"\n";
+        std::cout<<"nDistances"<<"\n";
+        nDistances=computeDistanceMatrix(neighbors,neighbors_i,E,Pinv);
+        std::cout<<"cDistances"<<"\n";
+        cDistances.resize(neighbors.size(),weights[0]);
+        for(count j=1;j<neighbors.size();j++){
+          cDistances[j]+=nDistances(0,j);
+        }
+        //Compute Sum
+        sum=0;
+        for(count a=0;a<neighbors.size();a++){
+          weight=1.;
+          for(count b=0;b<neighbors.size();b++){
+            if(a!=b){
+              weight*=weights[b];
+            }
+          }
+          sum+=weight;
+        }
+        std::cout<<"FirstJoin"<<"\n";
+        //FirstJoin
+        distance=weights[0]+xDistances[0];
+        std::cout<<"EdgeFire"<<"\n";
+        //EdgeFire-Loop
+        for(count j=1;j<weights.size();j++){
+            distanceTMP=distance;
+            xDistancesTMP=xDistances;
+            cDistancesTMP=cDistances;
+            nDistancesTMP=nDistances;
+            distance-=residual(xDistancesTMP[j],distanceTMP,cDistancesTMP[j],0,cDistancesTMP[j],weights[j],1.);
+          //Update xDistances after EdgeFire
+            for(count a=0;a<neighbors.size();a++){
+              xDistances[a]-=residual(xDistancesTMP[j],distanceTMP,nDistancesTMP(j,a),cDistancesTMP[a],cDistancesTMP[j],weights[j],1.);
+              cDistances[a]-=residual(cDistancesTMP[j],0,nDistancesTMP(j,a),cDistancesTMP[a],cDistancesTMP[j],weights[j],1.);
+            }
+            //Update nDistances after EdgeFire
+            for(count a=0;a<neighbors.size();a++){
+              for(count b=a+1;b<neighbors.size();b++){
+                nDistances(a,b)-=residual(nDistancesTMP(a,j),cDistances[a],nDistances(b,j),cDistances[b],cDistances[j],weights[j],1.);
+                nDistances(b,a)=nDistances(a,b);
+              }
+            }
+        }//end EDGE FIRE
+        std::cout<<"Non-Bridge-Delete"<<"\n";
+        //NonBrigdeDelete
+      for(count a=0;a<neighbors.size();a++){
+        for(count b=a+1;b<neighbors.size();b++){
+          weight=1.;
+          for(count j=0;j<weights.size();j++){
+            if(j!=a&&j!=b){
+              weight*=weights[j];
+            }
+          }
+          distanceTMP=distance;
+          xDistancesTMP=xDistances;
+          cDistancesTMP=cDistances;
+          nDistancesTMP=nDistances;
+          distance+=residual(xDistancesTMP[b],xDistancesTMP[a],cDistancesTMP[b],cDistancesTMP[a],nDistancesTMP(a,b),weight,-1.);
+        //Update xDistances after EdgeFire
+          for(count y=0;y<neighbors.size();y++){
+            xDistances[y]+=residual(xDistancesTMP[b],xDistancesTMP[a],nDistancesTMP(b,y),nDistancesTMP(a,y),nDistancesTMP(a,b),weight,-1.);
+            cDistances[y]+=residual(cDistancesTMP[b],cDistancesTMP[a],nDistancesTMP(b,y),nDistancesTMP(a,y),nDistancesTMP(a,b),weight,-1);
+          }
+          //Update nDistances after EdgeFire
+          for(count x=0;x<neighbors.size();x++){
+            for(count y=0;y<neighbors.size();y++){
+              nDistances(x,y)+=residual(nDistancesTMP(x,b),nDistancesTMP(x,a),nDistancesTMP(b,y),cDistances[b],nDistancesTMP(a,b),weight,-1.);
+              nDistances(y,x)=nDistances(x,y);
+            }
+          }
+        }
+      }//End Non Bridge Delete
+      std::cout<<"NonBrigdeDelete finished"<<"\n";
+      coarsedDistances[l]=cDistances;
+      tmp[l]=std::min(tmp[l],distance);
+      d+=tmp[l];
+      std::cout<<"save"<<"\n";
+    }//End for(i)
+      *dstApprox=tmp;
+      std::cout<<"END EXACT"<<"\n";
+      return d;
+    }
+    arma::Mat<double> CurrentFlowGroupCloseness::computeDistanceMatrix(std::vector<node> neighbors,std::vector<count> neighbors_i,std::vector<bool> E,arma::Mat<double> Pinv){
+        arma::Mat<double> nDistances(neighbors.size(),neighbors.size());
+        nDistances.zeros();
+        for(count i=0;i<neighbors.size();i++){
+          for(count j=i+1;j<neighbors.size();j++){
+            if(E[neighbors[i]]&&E[neighbors[j]]){
+              std::cout<<"case 1\n";
+              nDistances(i,j)=Pinv(neighbors_i[i],neighbors_i[i])+Pinv(neighbors_i[j],neighbors_i[j])-2*Pinv(neighbors_i[i],neighbors_i[j]);
+              nDistances(j,i)=nDistances(i,j);
+            }
+            else if(E[neighbors[i]]&&!E[neighbors[j]]){
+              std::cout<<"case 2\n";
+              nDistances(i,j)=distanceFinder(neighbors[i],neighbors_i[j]);
+              nDistances(j,i)=nDistances(i,j);
+            }
+            else if(!E[neighbors[i]]&&E[neighbors[j]]){
+              std::cout<<"case 3\n";
+              std::cout<<"search for "<< neighbors[j] << " in " << neighbors[i] << "\n";
+              nDistances(i,j)=distanceFinder(neighbors[j],neighbors_i[i]);
+              nDistances(j,i)=nDistances(i,j);
+            }
+            else{
+              std::cout<<"case 4\n";
+              nDistances(i,j)=distanceFinder(coarsedNodes[std::max(neighbors_i[i],neighbors_i[j])],std::min(neighbors_i[i],neighbors_i[j]));
+              nDistances(j,i)=nDistances(i,j);
+            }
+          }
+        }
+        std::cout<<"nDistances finished\n";
+        return nDistances;
+    }
+    double CurrentFlowGroupCloseness::residual(double dstxj, double dstxi, double dstjy,double dstiy,double dstij,double weight,double factor){
+      double variation;
+      variation=dstxj-dstxi-dstjy+dstiy;
+      variation*=variation;
+      variation/=4*(weight+factor*dstij);
+      return variation;
+    }
+    double CurrentFlowGroupCloseness::distanceFinder(node y, count x_i){
+      std::cout<<"distance Finder\n";
+      auto it=std::find(coarsedNeighbors[x_i].begin(), coarsedNeighbors[x_i].end(), y);
+      int pos = std::distance(coarsedNeighbors[x_i].begin(), it );
+      return coarsedDistances[x_i][pos];
+      std::cout<<"distance Finder finished\n";
     }
 } /* namespace NetworKit*/

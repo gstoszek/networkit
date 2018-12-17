@@ -63,17 +63,20 @@ namespace NetworKit {
         std::vector<node> coarsedNodes;
         std::vector<std::vector<node>> coarsedNeighbors;
         std::vector<std::vector<double>> coarsedWeights;
+        std::vector<std::vector<double>> coarsedDistances;
         void greedy();
         void greedyLAMG();
         count updateMinDegree();
         std::vector<node> coarsingIndices(count cDegree,bool Random);
-        void uncoarseEfffectiveResistanceDistanceMatrix(count ID);
         void mergePeripheralNodes();
         void coarseGraph(std::vector<node> vecOfChosenNodes,count degree);
         void computeStarCliqueWeights(node c);
         arma::Mat<double> computePinvOfLaplacian();
         double computeApproxDistances(std::vector<bool> W, std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox);
-
+        double computeExactDistance(std::vector<bool> E,std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox, arma::Mat<double> Pinv);
+        arma::Mat<double> computeDistanceMatrix(std::vector<node> neighbors,std::vector<count> neighbors_i,std::vector<bool> E,arma::Mat<double> Pinv);
+        double residual(double dstxj, double dstxi, double dstjy,double dstiy,double dstij,double weight,double factor);
+        double distanceFinder(node y, count x_i);
     };
 
 } /* namespace NetworKit */
