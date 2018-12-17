@@ -488,6 +488,7 @@ namespace NetworKit {
           for(count j=0;j<vecOfNeighbors.size();j++){
             vecOfWeights[j]=G.weight(c,vecOfNeighbors[j]);
           }
+	  //TODO: Here problem when creating coarsed for the second time
           ERDLevel coarsed(c,vecOfNeighbors,vecOfWeights);
           G.removeNode(c);
         }
@@ -529,7 +530,13 @@ namespace NetworKit {
                 }//for y
               }//if x
             }//for x
-            weight=S/weight;
+	    //TODO: Here weight can be zero! Segfault when dividing with zero!!
+	    // maria's example
+            if(weight > 0.)
+	      weight = S/weight;
+	    else weight = 1.; // not sure if you want it one here.
+	    // maria's example
+	    
             if(G.weight(v,w)!=0){
               weight=1./weight;
               weight+=1./G.weight(v,w);
