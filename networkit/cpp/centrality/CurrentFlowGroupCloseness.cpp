@@ -163,7 +163,7 @@ namespace NetworKit {
               /*
               d+=computeExactDistance(E,reverse,dst,&dstApprox,Pinv);
               */
-              CFGCC = d;
+              CFGCC = d+dApprox;
               tmpdst=dst;
               tmpApprox=dstApprox;
               s = v;
@@ -288,7 +288,6 @@ namespace NetworKit {
       }
       return min;
     }
-
     std::vector<node> CurrentFlowGroupCloseness::coarsingIndices(count courseningDegree, bool Random){
         bool search;
         count l;
