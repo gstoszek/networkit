@@ -58,7 +58,8 @@ namespace NetworKit {
         double epsilon;
         count n;
         count limit;
-        std::vector<node> vecOfPeripheralNodes;
+
+        std::vector<bool> E;
         std::vector<node> S;
         std::vector<node> coarsedNodes;
         std::vector<std::vector<node>> coarsedNeighbors;
@@ -66,17 +67,16 @@ namespace NetworKit {
         std::vector<std::vector<double>> coarsedDistances;
         void greedy();
         void greedyLAMG();
-        count updateMinDegree();
-        std::vector<node> coarsingIndices(count cDegree,bool Random);
-        void mergePeripheralNodes();
-        void coarseGraph(std::vector<node> vecOfChosenNodes,count degree);
-        void computeStarCliqueWeights(node c);
-        arma::Mat<double> computePinvOfLaplacian();
-        double computeApproxDistances(std::vector<bool> W, std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox);
-        double computeExactDistance(std::vector<bool> E,std::vector<node> reverse, std::vector<double> dst, std::vector<double> *dstApprox, arma::Mat<double> Pinv);
-        arma::Mat<double> computeDistanceMatrix(std::vector<node> neighbors,std::vector<count> neighbors_i,std::vector<bool> E,arma::Mat<double> Pinv);
-        double residual(double dstxj, double dstxi, double dstjy,double dstiy,double dstij,double weight,double factor);
+        count minDegree();
+        std::vector<node> coarsingNodes(count cDegree,bool Random);
+        void graphCoarsening(std::vector<node> nodes);
+        void adjacentCliqueWeights(std::vector<node> neighbors,std::vector<double> weights);
+        arma::Mat<double> pinv();
+        double exactDistance(count c,std::vector<double> dst, arma::Mat<double> Pinv);
+        arma::Mat<double> distanceMatrix(std::vector<node> neighbors,arma::Mat<double> Pinv);
+        double residual(double variation, double factor);
         double distanceFinder(node y, count x_i);
+        double starWeight(count c);
     };
 
 } /* namespace NetworKit */
