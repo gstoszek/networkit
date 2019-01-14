@@ -395,8 +395,6 @@ public:
 	 */
 	static CSRMatrix normalizedLaplacianMatrix(const Graph& graph, double zero = 0.0);
 
-
-
 	/**
 	 * Iterate over all non-zero elements of row @a row in the matrix and call handler(index column, double value)
 	 */

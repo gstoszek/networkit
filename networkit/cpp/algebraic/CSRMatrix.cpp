@@ -630,27 +630,18 @@ CSRMatrix CSRMatrix::incidenceMatrix(const Graph& graph, double zero) {
 
 	return CSRMatrix(graph.upperNodeIdBound(), graph.upperEdgeIdBound(), triplets, zero);
 }
-/**changed**/
 CSRMatrix CSRMatrix::laplacianMatrix(const Graph &graph, double zero) {
 	std::vector<Triplet> triples;
-	std::vector<node> vecOfNodes;
-	std::vector<count> reverse;
-	vecOfNodes=graph.nodes();
-	reverse.resize(graph.upperNodeIdBound());
-	for(count i=0;i<vecOfNodes.size();i++){
-		reverse[vecOfNodes[i]]=i;
-	}
+
 	graph.forNodes([&](const index i){
 		double weightedDegree = 0.0;
 		graph.forNeighborsOf(i, [&](const index j, double weight) { // - adjacency matrix
 			if (i != j) { // exclude diagonal since this would be subtracted by the adjacency weight
 				weightedDegree += weight;
 			}
-
-			triples.push_back({reverse[i],reverse[j],-weight});
+			triples.push_back({i,j,-weight});
 		});
-
-		triples.push_back({reverse[i],reverse[i], weightedDegree}); // degree matrix
+		triples.push_back({i,i, weightedDegree}); // degree matrix
 	});
 
 	return CSRMatrix(graph.numberOfNodes(), triples, zero);

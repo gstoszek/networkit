@@ -29,9 +29,7 @@ networkit_add_module(centrality
     SpanningEdgeCentrality.cpp
     TopCloseness.cpp
     TopHarmonicCloseness.cpp
-	  CurrentFlowGroupCloseness.cpp
-	  ERDLevel.cpp
-	  EffectiveResistanceDistance.cpp
+	CurrentFlowGroupCloseness.cpp
     )
 
 networkit_module_link_modules(centrality

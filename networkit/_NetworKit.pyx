@@ -6671,15 +6671,15 @@ cdef class GroupCloseness(Algorithm):
 
 cdef extern from "cpp/centrality/CurrentFlowGroupCloseness.h":
 	cdef cppclass _CurrentFlowGroupCloseness "NetworKit::CurrentFlowGroupCloseness"(_Centrality):
-		_CurrentFlowGroupCloseness(_Graph G, count, count, double, bool) except +
+		_CurrentFlowGroupCloseness(_Graph G, count, double) except +
 		vector[node] getNodesofGroup() except +
 		double getCFGCC() except +
 
 cdef class CurrentFlowGroupCloseness(Centrality):
 	"""
 	"""
-	def __cinit__(self, Graph G, k = 2, CB = 2, epsilon = 0.1, doInvert = True):
-		self._this = new _CurrentFlowGroupCloseness(G._this, k, CB, epsilon, doInvert)
+	def __cinit__(self, Graph G, k = 2, epsilon = 0.1):
+		self._this = new _CurrentFlowGroupCloseness(G._this, k, epsilon)
 
 	def getNodesofGroup(self):
 		return (<_CurrentFlowGroupCloseness*>(self._this)).getNodesofGroup()
